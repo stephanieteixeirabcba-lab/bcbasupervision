@@ -903,7 +903,7 @@ function getReadingGuide(ui, li) {
 
 // ── SUPABASE CONFIG & INIT ────────────────────────────────
 const CFG_KEY = 'bcba_supabase_cfg';
-let supabase = null;
+let _sb = null;
 
 function loadSupabaseConfig() {
   try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch(e) { return null; }
@@ -926,9 +926,9 @@ async function initSupabase() {
     return false;
   }
   try {
-    supabase = window.supabase.createClient(cfg.url, cfg.key);
+    _sb = window.supabase.createClient(cfg.url, cfg.key);
     // Quick connectivity check
-    await supabase.from('shared_data').select('key').limit(1);
+    await _sb.from('shared_data').select('key').limit(1);
     return true;
   } catch(e) {
     document.getElementById('loading-overlay').style.display = 'none';
@@ -945,11 +945,11 @@ const _cache = { user: {}, shared: {} };
 
 async function cacheLoad() {
   // Load all shared data
-  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  const { data: sd } = await _sb.from('shared_data').select('key,value');
   (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
   // Load all data for current user
   if (currentUser && currentUser.id) {
-    const { data: ud } = await supabase.from('user_data').select('key,value').eq('user_id', currentUser.id);
+    const { data: ud } = await _sb.from('user_data').select('key,value').eq('user_id', currentUser.id);
     (ud || []).forEach(r => { _cache.user[r.key] = r.value; });
   }
 }
@@ -957,11 +957,11 @@ async function cacheLoad() {
 async function uSaveDB(k, v) {
   _cache.user[k] = v;
   if (!currentUser?.id) return;
-  await supabase.from('user_data').upsert({ user_id: currentUser.id, key: k, value: v }, { onConflict: 'user_id,key' });
+  await _sb.from('user_data').upsert({ user_id: currentUser.id, key: k, value: v }, { onConflict: 'user_id,key' });
 }
 async function sSaveDB(k, v) {
   _cache.shared[k] = v;
-  await supabase.from('shared_data').upsert({ key: k, value: v }, { onConflict: 'key' });
+  await _sb.from('shared_data').upsert({ key: k, value: v }, { onConflict: 'key' });
 }
 function uLoad(k, def)  { const v = _cache.user[k];   return (v !== undefined && v !== null) ? v : def; }
 function sLoad(k, def)  { const v = _cache.shared[k]; return (v !== undefined && v !== null) ? v : def; }
@@ -1015,7 +1015,7 @@ async function signUp() {
   if (pw.length < 6)                 { err.textContent = 'Password must be at least 6 characters.'; return; }
   if (pw !== pw2)                    { err.textContent = 'Passwords do not match.'; return; }
   setAuthLoading('su-btn', true, 'Creating account…');
-  const { data, error } = await supabase.auth.signUp({ email, password: pw, options: { data: { full_name: name } } });
+  const { data, error } = await _sb.auth.signUp({ email, password: pw, options: { data: { full_name: name } } });
   setAuthLoading('su-btn', false, 'Create account');
   if (error) { err.textContent = error.message; return; }
   if (!data.user) { err.textContent = 'Sign-up failed. Please try again.'; return; }
@@ -1035,7 +1035,7 @@ async function signIn() {
   if (!email) { err.textContent = 'Please enter your email.'; return; }
   if (!pw)    { err.textContent = 'Please enter your password.'; return; }
   setAuthLoading('si-btn', true, 'Signing in…');
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
   setAuthLoading('si-btn', false, 'Sign in');
   if (error) { err.textContent = error.message; return; }
   const name = data.user.user_metadata?.full_name || email.split('@')[0];
@@ -1055,7 +1055,7 @@ async function signInSupervisor() {
   if (!pw) { err.textContent = 'Please enter the supervisor password.'; return; }
   setAuthLoading('sp-btn', true, 'Signing in…');
   // Load shared data first so we can check the stored password
-  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  const { data: sd } = await _sb.from('shared_data').select('key,value');
   (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
   setAuthLoading('sp-btn', false, 'Sign in as supervisor');
   const DEFAULT_SUP_PW = 'supervisor123';
@@ -1088,7 +1088,7 @@ function enterApp() {
 }
 
 async function logout() {
-  if (currentRole !== 'supervisor') await supabase.auth.signOut();
+  if (currentRole !== 'supervisor') await _sb.auth.signOut();
   currentUser = null; currentRole = null;
   _cache.user = {}; _cache.shared = {};
   document.getElementById('login-screen').style.display = 'flex';
@@ -1107,7 +1107,7 @@ async function logout() {
   if (!ok) return;
 
   // Check for existing session
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await _sb.auth.getSession();
   if (session?.user) {
     const u = session.user;
     const name = u.user_metadata?.full_name || u.email.split('@')[0];
@@ -1223,7 +1223,7 @@ async function loadTraineeList() {
   const c = document.getElementById('trainee-list-content'); if (!c) return;
   c.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading…</div>';
   // Fetch all profile rows from user_data
-  const { data, error } = await supabase.from('user_data').select('user_id,value').eq('key','profile');
+  const { data, error } = await _sb.from('user_data').select('user_id,value').eq('key','profile');
   if (error || !data || !data.length) {
     c.innerHTML = '<div class="empty-state"><p>No trainees have signed up yet.</p></div>'; return;
   }
@@ -1449,9 +1449,9 @@ async function loadReview(){
   const c=document.getElementById('review-content');c.innerHTML='<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading submissions…</div>';
 
   // Fetch all hw_ and disc_ keys from ALL users (supervisor only)
-  const { data: allRows } = await supabase.from('user_data').select('user_id,key,value');
+  const { data: allRows } = await _sb.from('user_data').select('user_id,key,value');
   // Also reload shared data cache
-  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  const { data: sd } = await _sb.from('shared_data').select('key,value');
   (sd||[]).forEach(r=>{ _cache.shared[r.key]=r.value; });
   // Build a per-user cache
   const byUser = {};
@@ -1479,9 +1479,9 @@ async function loadReview(){
 async function saveFeedback(uid,ui,li){
   const fb=document.getElementById(`fb-${uid}-${ui}-${li}`).value;
   // Load the specific hw row for this user directly
-  const { data } = await supabase.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
-  await supabase.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb}},{onConflict:'user_id,key'});
+  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb}},{onConflict:'user_id,key'});
   showToast('Feedback saved!');loadReview();
 }
 
