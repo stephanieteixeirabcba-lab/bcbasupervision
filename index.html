@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCBA Supervision with Stephanie Teixeira</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--coral:#D85A30;--coral-light:#FAECE7;--coral-dark:#993C1D;--cream:#FDF8F4;--white:#FFFFFF;--gray-50:#F9F7F5;--gray-100:#F0EDE9;--gray-200:#DDD9D4;--gray-400:#A09A93;--gray-600:#6B6460;--gray-800:#2C2824;--purple:#534AB7;--purple-light:#EEEDFE;--teal:#0F6E56;--teal-light:#E1F5EE;--amber:#BA7517;--amber-light:#FAEEDA;--blue:#185FA5;--blue-light:#E6F1FB;--font-display:'DM Serif Display',Georgia,serif;--font-body:'DM Sans',system-ui,sans-serif;--radius:10px;--radius-lg:16px;--shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--cream);color:var(--gray-800);min-height:100vh;font-size:15px;line-height:1.6}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);padding:2rem}
+.login-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:3rem 2.5rem;width:100%;max-width:420px;text-align:center}
+.login-logo{font-family:var(--font-display);font-size:1.6rem;color:var(--coral);margin-bottom:0.15rem;line-height:1.2}
+.login-sub{font-size:12px;color:var(--gray-400);margin-bottom:1.75rem;letter-spacing:0.04em}
+.login-tabs{display:flex;gap:4px;background:var(--gray-100);border-radius:var(--radius);padding:4px;margin-bottom:1.5rem}
+.login-tab{flex:1;padding:8px;border-radius:7px;border:none;background:transparent;font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--gray-400);cursor:pointer;transition:all 0.15s}
+.login-tab.active{background:var(--white);color:var(--gray-800);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.login-field{margin-bottom:1rem;text-align:left}
+.login-field label{font-size:12px;font-weight:500;color:var(--gray-600);display:block;margin-bottom:5px}
+.login-field input{width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-family:var(--font-body);font-size:14px;color:var(--gray-800);background:var(--white);outline:none;transition:border-color 0.15s}
+.login-field input:focus{border-color:var(--coral)}
+.login-btn{width:100%;padding:11px;background:var(--coral);color:white;border:none;border-radius:var(--radius);font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;margin-top:0.5rem}
+.login-btn:hover{background:var(--coral-dark)}
+.login-hint{font-size:12px;color:var(--gray-400);margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-100)}
+.error-msg{font-size:12px;color:#c0392b;margin-top:0.5rem}
+#app{display:none;min-height:100vh}
+.app-layout{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;background:var(--white);border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;position:sticky;top:0;z-index:10}
+.topbar-brand{display:flex;align-items:baseline;gap:10px}
+.brand-name{font-family:var(--font-display);font-size:1.15rem;color:var(--coral)}
+.brand-tag{font-size:11px;color:var(--gray-400);letter-spacing:0.05em}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.user-pill{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-100);font-size:13px;color:var(--gray-600)}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--coral);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.user-avatar.sup{background:var(--purple)}
+.logout-btn{font-size:12px;color:var(--gray-400);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-family:var(--font-body)}
+.logout-btn:hover{color:var(--gray-800);background:var(--gray-100)}
+.sidebar{background:var(--white);border-right:1px solid var(--gray-100);padding:1rem 0.75rem;overflow-y:auto}
+.nav-section-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-400);padding:0.75rem 0.75rem 0.4rem;margin-top:0.25rem}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--radius);border:none;background:none;font-family:var(--font-body);font-size:13.5px;color:var(--gray-600);cursor:pointer;width:100%;text-align:left;transition:all 0.12s;margin-bottom:1px}
+.nav-item:hover{background:var(--gray-50);color:var(--gray-800)}
+.nav-item.active{background:var(--coral-light);color:var(--coral-dark);font-weight:500}
+.nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-coral{background:var(--coral)}.dot-purple{background:var(--purple)}.dot-teal{background:var(--teal)}.dot-amber{background:var(--amber)}.dot-gray{background:var(--gray-400)}.dot-blue{background:var(--blue)}
+.main-content{padding:1.75rem 2rem;overflow-y:auto;background:var(--cream)}
+.page{display:none}.page.active{display:block}
+.page-header{margin-bottom:1.5rem}
+.page-header h1{font-family:var(--font-display);font-size:1.6rem;color:var(--gray-800);line-height:1.2}
+.page-header p{font-size:13px;color:var(--gray-400);margin-top:4px}
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card-title{font-weight:600;font-size:14px;color:var(--gray-800);margin-bottom:0.75rem}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem}
+.stat-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius);padding:1rem 1.25rem}
+.stat-val{font-size:26px;font-weight:600;color:var(--gray-800);line-height:1}
+.stat-lbl{font-size:12px;color:var(--gray-400);margin-top:4px}
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.unit-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:all 0.15s;text-align:left;border-left:4px solid transparent}
+.unit-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.unit-number{font-size:11px;color:var(--gray-400);margin-bottom:4px;font-weight:500}
+.unit-name{font-size:13.5px;font-weight:600;color:var(--gray-800);margin-bottom:8px;line-height:1.3}
+.unit-meta{font-size:11px;color:var(--gray-400)}
+.unit-progress{height:4px;background:var(--gray-100);border-radius:2px;margin-top:10px;overflow:hidden}
+.unit-bar{height:4px;border-radius:2px;transition:width 0.4s}
+.lesson-list{list-style:none}
+.lesson-item{display:flex;align-items:flex-start;gap:12px;padding:10px 8px;border-bottom:1px solid var(--gray-100);cursor:pointer;transition:background 0.1s;border-radius:var(--radius)}
+.lesson-item:hover{background:var(--gray-50)}
+.lesson-item:last-child{border-bottom:none}
+.lesson-item.locked{opacity:0.4;cursor:not-allowed}
+.lesson-item.locked:hover{background:none}
+.lesson-num{width:28px;height:28px;border-radius:50%;background:var(--gray-100);color:var(--gray-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px}
+.lesson-num.done{background:var(--teal-light);color:var(--teal)}
+.lesson-info{flex:1}
+.lesson-title{font-size:13.5px;font-weight:500;color:var(--gray-800)}
+.lesson-sub{font-size:11px;color:var(--gray-400);margin-top:2px}
+.lesson-status{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:500;flex-shrink:0;align-self:flex-start;margin-top:2px}
+.status-done{background:var(--teal-light);color:var(--teal)}
+.status-locked{background:var(--gray-100);color:var(--gray-400)}
+.has-content-dot{width:6px;height:6px;border-radius:50%;background:var(--coral);flex-shrink:0;margin-top:5px}
+/* SLIDE */
+.slide-container{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem}
+.slide-header{background:var(--coral);padding:1.25rem 1.5rem;color:white}
+.slide-unit-label{font-size:11px;opacity:0.75;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px}
+.slide-title{font-family:var(--font-display);font-size:1.3rem}
+.slide-body{padding:1.5rem;min-height:200px}
+.slide-body h3{font-size:14px;font-weight:600;color:var(--gray-800);margin:0 0 0.5rem}
+.slide-body ul{padding-left:1.25rem;color:var(--gray-600);font-size:14px;line-height:1.9}
+.slide-body p{color:var(--gray-600);font-size:14px;line-height:1.7;margin-bottom:0.75rem}
+.slide-body strong{color:var(--gray-800)}
+.slide-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 1.5rem;border-top:1px solid var(--gray-100);background:var(--gray-50)}
+.slide-nav{display:flex;gap:8px}
+/* READING GUIDE */
+.reading-section{margin-bottom:1.25rem}
+.reading-section h3{font-size:13px;font-weight:600;color:var(--coral-dark);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--coral-light)}
+.reading-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:13.5px;color:var(--gray-600)}
+.reading-item:last-child{border-bottom:none}
+.reading-num{font-weight:600;color:var(--gray-400);flex-shrink:0;min-width:18px}
+.reading-focus{font-size:11px;color:var(--gray-400);margin-top:2px}
+.self-assess-table{width:100%;border-collapse:collapse}
+.self-assess-table td{padding:7px 10px;border-bottom:1px solid var(--gray-100);font-size:13px}
+.self-assess-table tr:last-child td{border-bottom:none}
+.self-assess-table .skill-name{color:var(--gray-800);font-weight:500}
+.rating-scale{background:var(--gray-50);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--gray-600);line-height:1.8;margin-top:8px}
+/* ACTIVITY */
+.vignette{background:var(--purple-light);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;border-left:4px solid var(--purple)}
+.vignette-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.vignette-title{font-size:14px;font-weight:600;color:var(--gray-800);margin-bottom:6px}
+.vignette-scenario{font-size:13.5px;color:var(--gray-600);line-height:1.6;margin-bottom:10px;font-style:italic}
+.vignette-q{font-size:13.5px;font-weight:500;color:var(--gray-800);padding:6px 0;border-top:1px solid rgba(83,74,183,0.15)}
+.debrief-box{background:var(--amber-light);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;border-left:4px solid var(--amber);margin-top:1rem}
+.debrief-label{font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px}
+.debrief-q{font-size:13.5px;color:var(--gray-800);padding:5px 0;border-bottom:1px solid rgba(186,117,23,0.2)}
+.debrief-q:last-child{border-bottom:none}
+/* BUTTONS */
+.btn{padding:7px 16px;border-radius:var(--radius);border:1.5px solid var(--gray-200);background:var(--white);font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all 0.15s}
+.btn:hover{border-color:var(--gray-400);color:var(--gray-800)}
+.btn-primary{background:var(--coral);border-color:var(--coral);color:white}
+.btn-primary:hover{background:var(--coral-dark);border-color:var(--coral-dark)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+/* FORMS */
+.concept-chips{display:flex;flex-wrap:wrap;gap:8px}
+.concept-chip{padding:5px 12px;background:var(--coral-light);color:var(--coral-dark);border-radius:16px;font-size:12px;font-weight:500}
+.discussion-q{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);margin-bottom:1rem;overflow:hidden}
+.dq-header{padding:12px 1.25rem;background:var(--gray-50);border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+.dq-num{width:24px;height:24px;background:var(--teal);color:white;border-radius:50%;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dq-text{font-size:14px;font-weight:500;color:var(--gray-800)}
+.dq-body{padding:1rem 1.25rem}
+textarea{width:100%;border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:13.5px;color:var(--gray-800);background:var(--white);resize:vertical;min-height:90px;outline:none;line-height:1.6;transition:border-color 0.15s}
+textarea:focus{border-color:var(--coral)}
+.dq-actions{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.saved-indicator{font-size:12px;color:var(--teal);opacity:0;transition:opacity 0.3s}
+.saved-indicator.show{opacity:1}
+.hw-prompt{background:var(--amber-light);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;border-left:4px solid var(--amber)}
+.hw-prompt-label{font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.hw-prompt-title{font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:8px}
+.hw-prompt-body{font-size:13.5px;color:var(--gray-600);line-height:1.7;white-space:pre-line}
+/* RESOURCES */
+.resource-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100)}
+.resource-item:last-child{border-bottom:none}
+.resource-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.res-pdf{background:#FCEAE8}.res-link{background:var(--purple-light)}.res-doc{background:var(--teal-light)}
+.resource-info{flex:1}
+.resource-name{font-size:13.5px;font-weight:500;color:var(--gray-800)}
+.resource-meta{font-size:12px;color:var(--gray-400);margin-top:2px}
+/* REVIEW */
+.submission-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden}
+.submission-header{display:flex;justify-content:space-between;align-items:center;padding:10px 1.25rem;background:var(--gray-50);border-bottom:1px solid var(--gray-100)}
+.submission-meta{font-size:12px;color:var(--gray-400)}
+.submission-name{font-size:13.5px;font-weight:600;color:var(--gray-800)}
+.submission-body{padding:1rem 1.25rem}
+.submission-text{font-size:13px;color:var(--gray-600);line-height:1.6;background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-bottom:10px}
+.submission-actions{display:flex;gap:8px;justify-content:flex-end}
+/* FORMS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:12px;font-weight:500;color:var(--gray-600)}
+input[type="text"],input[type="number"],input[type="password"],select{padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-family:var(--font-body);font-size:13.5px;color:var(--gray-800);background:var(--white);outline:none;transition:border-color 0.15s;width:100%}
+input:focus,select:focus{border-color:var(--coral)}
+/* TABS */
+.tab-bar{display:flex;gap:2px;border-bottom:1px solid var(--gray-200);margin-bottom:1.25rem;flex-wrap:wrap}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--gray-400);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--font-body);transition:color 0.15s;white-space:nowrap}
+.tab.active{color:var(--coral);border-bottom-color:var(--coral)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.lesson-nav-bar{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius);padding:8px 14px;margin-bottom:1rem;font-size:13px;color:var(--gray-600)}
+.breadcrumb{display:flex;align-items:center;gap:6px}
+.breadcrumb span{color:var(--gray-400);font-size:12px}
+.breadcrumb a{color:var(--coral);cursor:pointer;text-decoration:none}
+.breadcrumb a:hover{text-decoration:underline}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-coral{background:var(--coral-light);color:var(--coral-dark)}
+.badge-teal{background:var(--teal-light);color:var(--teal)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+/* TOGGLES */
+.toggle-wrap{display:flex;align-items:center;gap:8px}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--gray-200);border-radius:20px;cursor:pointer;transition:background 0.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:white;border-radius:50%;transition:transform 0.2s}
+.toggle input:checked+.toggle-slider{background:var(--teal)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
+.toggle-label{font-size:12px;color:var(--gray-600)}
+.lock-table{width:100%;border-collapse:collapse}
+.lock-table th{font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;padding:6px 10px;border-bottom:1px solid var(--gray-100);text-transform:uppercase;letter-spacing:0.05em}
+.lock-table td{padding:9px 10px;border-bottom:1px solid var(--gray-100);font-size:13px;color:var(--gray-600);vertical-align:middle}
+.lock-table tr:last-child td{border-bottom:none}
+.lock-table .lname{color:var(--gray-800);font-weight:500}
+.unit-lock-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 10px;flex-wrap:wrap;gap:8px}
+.res-manage-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--gray-100)}
+.res-manage-row:last-child{border-bottom:none}
+.res-del{padding:4px 10px;font-size:12px;border-radius:var(--radius);border:1px solid var(--gray-200);background:none;color:#c0392b;cursor:pointer;font-family:var(--font-body);flex-shrink:0}
+.res-del:hover{background:#fdf0f0}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-800);color:white;padding:10px 18px;border-radius:var(--radius);font-size:13px;opacity:0;transform:translateY(10px);transition:all 0.25s;z-index:1000;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.empty-state{text-align:center;padding:3rem 2rem;color:var(--gray-400)}
+.empty-state p{font-size:14px;margin-top:8px}
+.sup-only{display:none}
+.supervisor-view .sup-only{display:flex!important}
+/* CONTENT BADGE on lesson */
+.content-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.cb{padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600}
+.cb-slides{background:#FCEAE8;color:var(--coral-dark)}
+.cb-guide{background:var(--blue-light);color:var(--blue)}
+.cb-activity{background:var(--purple-light);color:var(--purple)}
+.cb-hw{background:var(--amber-light);color:var(--amber)}
+/* Loading spinner for auth */
+.auth-loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dot-blue{background:var(--blue)}
+/* SETUP SCREEN */
+#setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);padding:2rem}
+.setup-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:2.5rem;width:100%;max-width:480px}
+.setup-card h2{font-family:var(--font-display);font-size:1.4rem;color:var(--coral);margin-bottom:0.25rem}
+.setup-card p{font-size:13px;color:var(--gray-400);margin-bottom:1.5rem;line-height:1.6}
+.setup-step{background:var(--gray-50);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;font-size:12.5px;color:var(--gray-600);line-height:1.7}
+.setup-step strong{color:var(--gray-800)}
+.setup-step code{background:var(--gray-100);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--coral-dark)}
+/* LOADING OVERLAY */
+#loading-overlay{position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:12px}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--gray-200);border-top-color:var(--coral);border-radius:50%;animation:spin 0.8s linear infinite}
+.loading-text{font-size:13px;color:var(--gray-400)}
+
+</style>
+</head>
+<body>
+<!-- ── LOADING OVERLAY ── -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading…</div>
+</div>
+
+<!-- ── SUPABASE SETUP SCREEN ── -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-card">
+    <h2>Connect to Supabase</h2>
+    <p>This app needs a Supabase project to store logins and data. Follow the steps below, then paste your credentials.</p>
+    <div class="setup-step"><strong>Step 1 — Create a free project</strong><br>Go to <a href="https://supabase.com" target="_blank" style="color:var(--coral)">supabase.com</a> → New project. Note your Project URL and anon key (Settings → API).</div>
+    <div class="setup-step"><strong>Step 2 — Run this SQL</strong> in the Supabase SQL editor:<br>
+<code style="display:block;white-space:pre;font-size:11px;margin-top:6px;line-height:1.6">create table if not exists user_data (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users not null,
+  key text not null,
+  value jsonb,
+  unique(user_id, key)
+);
+alter table user_data enable row level security;
+create policy "Users own their data" on user_data
+  for all using (auth.uid() = user_id);
+
+create table if not exists shared_data (
+  key text primary key,
+  value jsonb
+);
+alter table shared_data enable row level security;
+create policy "Anyone can read shared" on shared_data
+  for select using (true);
+create policy "Authenticated can write shared" on shared_data
+  for all using (auth.role() = 'authenticated');</code></div>
+    <div class="setup-step"><strong>Step 3 — Enable Email auth</strong><br>In Supabase → Authentication → Providers → Email: enable it. For testing, also disable "Confirm email" (Auth → Settings → "Enable email confirmations" off).</div>
+    <div class="login-field" style="margin-top:1.25rem"><label>Supabase Project URL</label><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co"/></div>
+    <div class="login-field"><label>Supabase Anon Key</label><input type="text" id="cfg-key" placeholder="eyJhbGci..."/></div>
+    <div id="cfg-error" class="error-msg"></div>
+    <button class="login-btn" onclick="saveSupabaseConfig()">Save &amp; Connect</button>
+    <div class="login-hint">These are stored in your browser's localStorage and never sent anywhere except directly to your Supabase project.</div>
+  </div>
+</div>
+
+<!-- ── LOGIN / SIGNUP SCREEN ── -->
+<div id="login-screen" style="display:none">
+  <div class="login-card" id="lc-signin">
+    <div class="login-logo">BCBA Supervision</div>
+    <div class="login-sub">with Stephanie Teixeira</div>
+    <div class="login-tabs">
+      <button class="login-tab active" id="lt-signin" onclick="showAuthTab('signin')">Sign in</button>
+      <button class="login-tab" id="lt-signup" onclick="showAuthTab('signup')">Create account</button>
+      <button class="login-tab" id="lt-supervisor" onclick="showAuthTab('supervisor')">Supervisor</button>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="auth-signin">
+      <div class="login-field"><label>Email</label><input type="email" id="si-email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')signIn()"/></div>
+      <div class="login-field"><label>Password</label><input type="password" id="si-pass" placeholder="Your password" onkeydown="if(event.key==='Enter')signIn()"/></div>
+      <div id="si-error" class="error-msg"></div>
+      <button class="login-btn" id="si-btn" onclick="signIn()">Sign in</button>
+      <div style="font-size:12px;color:var(--gray-400);margin-top:12px">Don't have an account? <a href="#" style="color:var(--coral)" onclick="showAuthTab('signup');return false">Create one →</a></div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="auth-signup" style="display:none">
+      <div class="login-field"><label>Full name</label><input type="text" id="su-name" placeholder="e.g. Maria Santos"/></div>
+      <div class="login-field"><label>Email</label><input type="email" id="su-email" placeholder="you@email.com"/></div>
+      <div class="login-field"><label>Create password <span style="font-weight:400;color:var(--gray-400)">(min 6 characters)</span></label><input type="password" id="su-pass" placeholder="Choose a password"/></div>
+      <div class="login-field"><label>Confirm password</label><input type="password" id="su-pass2" placeholder="Repeat your password" onkeydown="if(event.key==='Enter')signUp()"/></div>
+      <div id="su-error" class="error-msg"></div>
+      <button class="login-btn" id="su-btn" onclick="signUp()">Create account</button>
+      <div style="font-size:12px;color:var(--gray-400);margin-top:12px">Already have an account? <a href="#" style="color:var(--coral)" onclick="showAuthTab('signin');return false">Sign in →</a></div>
+    </div>
+
+    <!-- SUPERVISOR -->
+    <div id="auth-supervisor" style="display:none">
+      <div style="font-size:12px;margin-bottom:14px;text-align:left;background:var(--coral-light);padding:10px 12px;border-radius:var(--radius);color:var(--coral-dark)">Supervisor access gives you full control over content, access, and trainee submissions.<br><span style="opacity:0.75">Default password: <strong>supervisor123</strong></span></div>
+      <div class="login-field"><label>Supervisor password</label><input type="password" id="sp-pass" placeholder="Enter supervisor password" onkeydown="if(event.key==='Enter')signInSupervisor()"/></div>
+      <div id="sp-error" class="error-msg"></div>
+      <button class="login-btn" id="sp-btn" onclick="signInSupervisor()">Sign in as supervisor</button>
+    </div>
+    <div class="login-hint">Connected to Supabase. <a href="#" style="color:var(--coral)" onclick="localStorage.removeItem('bcba_supabase_cfg');location.reload();return false">Reconfigure →</a></div>
+  </div>
+</div>
+<div id="app">
+<div class="app-layout" id="app-layout">
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-name">BCBA Supervision</span>
+      <span class="brand-tag">with Stephanie Teixeira</span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-pill"><div class="user-avatar" id="user-avatar">?</div><div><span id="user-display-name">User</span><div id="user-email-display" style="font-size:11px;color:var(--gray-400);margin-top:-1px"></div></div></div>
+      <button class="logout-btn" onclick="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section-label">Learn</div>
+    <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)"><span class="nav-dot dot-gray"></span> Dashboard</button>
+    <button class="nav-item" data-page="curriculum" onclick="showPage('curriculum',this)"><span class="nav-dot dot-coral"></span> Curriculum</button>
+    <button class="nav-item" data-page="discussion" onclick="showPage('discussion',this)"><span class="nav-dot dot-teal"></span> Discussion</button>
+    <button class="nav-item" data-page="homework" onclick="showPage('homework',this)"><span class="nav-dot dot-amber"></span> Homework</button>
+    <button class="nav-item" data-page="resources" onclick="showPage('resources',this)"><span class="nav-dot dot-purple"></span> Resources</button>
+    <div class="nav-section-label sup-only" style="display:none">Supervisor</div>
+    <button class="nav-item sup-only" style="display:none" data-page="review" onclick="showPage('review',this)"><span class="nav-dot dot-teal"></span> Review submissions</button>
+    <button class="nav-item sup-only" style="display:none" data-page="manage" onclick="showPage('manage',this)"><span class="nav-dot dot-purple"></span> Manage content</button>
+    <button class="nav-item sup-only" style="display:none" data-page="access" onclick="showPage('access',this)"><span class="nav-dot dot-coral"></span> Access controls</button>
+    <button class="nav-item sup-only" style="display:none" data-page="manage-resources" onclick="showPage('manage-resources',this)"><span class="nav-dot dot-amber"></span> Manage resources</button>
+    <button class="nav-item sup-only" style="display:none" data-page="trainees" onclick="showPage('trainees',this);loadTraineeList()"><span class="nav-dot dot-blue"></span> Trainees</button>
+  </nav>
+
+  <main class="main-content">
+    <!-- DASHBOARD -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header"><h1>Welcome back, <span id="welcome-name">Trainee</span></h1><p>Your supervision journey — track your progress across all units and lessons</p></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">8</div><div class="stat-lbl">Total units</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-unlocked">52</div><div class="stat-lbl">Lessons unlocked</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">Completed</div></div>
+      </div>
+      <div class="card"><div class="card-title">All units</div><div class="unit-grid" id="dash-unit-grid"></div></div>
+    </section>
+
+    <!-- CURRICULUM -->
+    <section class="page" id="page-curriculum">
+      <div id="curriculum-unit-view">
+        <div class="page-header"><h1>Curriculum</h1><p>Select a unit to view its lessons — lessons with colored badges have full content loaded</p></div>
+        <div class="unit-grid" id="curr-unit-grid"></div>
+      </div>
+      <div id="curriculum-lesson-view" style="display:none">
+        <div class="lesson-nav-bar">
+          <div class="breadcrumb"><a onclick="showUnitList()">Curriculum</a><span>›</span><span id="lesson-breadcrumb-unit">Unit</span></div>
+          <button class="btn btn-sm" onclick="showUnitList()">← Back</button>
+        </div>
+        <div class="page-header"><h1 id="lesson-unit-title">Unit</h1><p id="lesson-unit-desc"></p></div>
+        <div class="card"><ul class="lesson-list" id="lesson-list"></ul></div>
+      </div>
+      <div id="curriculum-content-view" style="display:none">
+        <div class="lesson-nav-bar">
+          <div class="breadcrumb"><a onclick="showUnitList()">Curriculum</a><span>›</span><a onclick="showLessonList(currentUnitIdx)" id="cbu">Unit</a><span>›</span><span id="cbl">Lesson</span></div>
+          <button class="btn btn-sm" onclick="showLessonList(currentUnitIdx)">← Back</button>
+        </div>
+        <div class="tab-bar" id="content-tab-bar">
+          <button class="tab active" onclick="switchContentTab('slides',this)">Theory &amp; slides</button>
+          <button class="tab" onclick="switchContentTab('concepts',this)">Key concepts</button>
+          <button class="tab" id="tab-guide" onclick="switchContentTab('guide',this)" style="display:none">Reading guide</button>
+          <button class="tab" id="tab-activity" onclick="switchContentTab('activity',this)" style="display:none">Activity</button>
+        </div>
+        <div id="content-slides" class="tab-panel active">
+          <div class="slide-container">
+            <div class="slide-header"><div class="slide-unit-label" id="slide-unit-label">Unit</div><div class="slide-title" id="slide-title">Lesson</div></div>
+            <div class="slide-body" id="slide-body">Loading...</div>
+            <div class="slide-footer">
+              <div class="slide-nav"><button class="btn btn-sm" onclick="prevSlide()">← Previous</button><button class="btn btn-sm btn-primary" onclick="nextSlide()">Next →</button></div>
+              <span style="font-size:12px;color:var(--gray-400)" id="slide-counter">Slide 1 of 1</span>
+            </div>
+          </div>
+        </div>
+        <div id="content-concepts" class="tab-panel"><div class="card"><div class="card-title">Key concepts</div><div class="concept-chips" id="concept-chips"></div></div></div>
+        <div id="content-guide" class="tab-panel"></div>
+        <div id="content-activity" class="tab-panel"></div>
+      </div>
+    </section>
+
+    <!-- DISCUSSION -->
+    <section class="page" id="page-discussion">
+      <div class="page-header"><h1>Discussion questions</h1><p>Reflect and respond — your answers are saved automatically</p></div>
+      <div style="margin-bottom:1rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div><label class="form-label" style="display:inline;margin-right:6px">Unit:</label><select id="discussion-unit-select" onchange="loadDiscussionLessons()" style="width:auto"></select></div>
+        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="discussion-lesson-select" onchange="loadDiscussionQuestions()" style="width:auto"></select></div>
+      </div>
+      <div id="discussion-questions"></div>
+    </section>
+
+    <!-- HOMEWORK -->
+    <section class="page" id="page-homework">
+      <div class="page-header"><h1>Homework</h1><p>Submit your work — your supervisor will review and leave feedback</p></div>
+      <div style="margin-bottom:1rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div><label class="form-label" style="display:inline;margin-right:6px">Unit:</label><select id="hw-unit-select" onchange="loadHWLessons()" style="width:auto"></select></div>
+        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="hw-lesson-select" onchange="loadHWContent()" style="width:auto"></select></div>
+      </div>
+      <div id="hw-content"></div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="page" id="page-resources">
+      <div class="page-header"><h1>Resources</h1><p>Reference materials and links curated for your supervision cycle</p></div>
+      <div id="trainee-resources-body"></div>
+    </section>
+
+    <!-- REVIEW -->
+    <section class="page" id="page-review">
+      <div class="page-header"><h1>Review submissions</h1><p>Read trainee responses and leave feedback</p></div>
+      <div style="margin-bottom:1rem"><label class="form-label" style="display:inline;margin-right:6px">Filter:</label><select id="review-unit-select" onchange="loadReview()" style="width:auto"></select></div>
+      <div id="review-content"></div>
+    </section>
+
+    <!-- MANAGE CONTENT -->
+    <section class="page" id="page-manage">
+      <div class="page-header"><h1>Manage content</h1><p>Add or edit theory, discussion questions, and homework per lesson</p></div>
+      <div style="margin-bottom:1rem;display:flex;gap:12px;flex-wrap:wrap">
+        <div><label class="form-label" style="display:inline;margin-right:6px">Unit:</label><select id="manage-unit-select" onchange="loadManageLessons()" style="width:auto"></select></div>
+        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="manage-lesson-select" onchange="renderManageForm()" style="width:auto"></select></div>
+      </div>
+      <div id="manage-content-area"></div>
+    </section>
+
+    <!-- ACCESS CONTROLS -->
+    <section class="page" id="page-access">
+      <div class="page-header"><h1>Access controls</h1><p>Lock or unlock units and individual lessons — locked lessons appear grayed out for trainees</p></div>
+      <div class="card" style="margin-bottom:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div><div class="card-title" style="margin-bottom:2px">Quick actions</div><div style="font-size:12px;color:var(--gray-400)">Apply to every lesson at once</div></div>
+          <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="setAllAccess(false)">Lock all</button><button class="btn btn-sm btn-primary" onclick="setAllAccess(true)">Unlock all</button></div>
+        </div>
+      </div>
+      <div id="access-controls-list"></div>
+    </section>
+
+    <!-- MANAGE RESOURCES -->
+    <section class="page" id="page-manage-resources">
+      <div class="page-header"><h1>Manage resources</h1><p>Add, edit, or remove links and files visible to trainees</p></div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-title">Add a new resource</div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="form-group"><label class="form-label">Resource name</label><input type="text" id="new-res-name" placeholder="e.g. BACB Ethics Code"/></div>
+          <div class="form-group"><label class="form-label">Category</label><select id="new-res-cat"><option>Required reading</option><option>Tools &amp; templates</option><option>Additional reading</option></select></div>
+        </div>
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="form-group"><label class="form-label">URL (optional)</label><input type="text" id="new-res-url" placeholder="https://..."/></div>
+          <div class="form-group"><label class="form-label">Type</label><select id="new-res-type"><option>PDF</option><option>Link</option><option>Template</option><option>Article</option></select></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end"><button class="btn btn-sm btn-primary" onclick="addResource()">Add resource</button></div>
+      </div>
+      <div id="resource-manage-list"></div>
+    </section>
+
+    <!-- TRAINEES (supervisor) -->
+    <section class="page" id="page-trainees">
+      <div class="page-header"><h1>Trainees</h1><p>All accounts that have signed up to your supervision platform</p></div>
+      <div class="card"><div class="card-title">Registered trainees</div><div id="trainee-list-content"><div style="font-size:13px;color:var(--gray-400)">Loading…</div></div></div>
+    </section>
+  </main>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+// ── WEEK CONTENT DATA ────────────────────────────────────
+// Maps to CURRICULUM indices: Unit 2 (Concepts & Principles) = index 2
+// Unit 3 (Measurement) = index 3, Unit 4 (Experimental Design) = index 4
+
+const WEEK_CONTENT = {
+
+  // ── WEEK 2: Concepts & Principles + Strength-Based (Unit index 2 = Concepts & Principles)
+  // Lessons 0-6 map to B1-B4 + RW-B1-B3
+  // We'll attach to Unit index 2 (Concepts & Principles), lessons 0-6
+
+  "2_0": { // Unit 2, Lesson 0: Exploring Reinforcement & Punishment
+    slides: [
+      { heading: "Lesson B1: Exploring Reinforcement & Punishment", body: "<p><strong>Week 2 | Task List: B. Concepts and Principles</strong></p><ul><li>Positive reinforcement: a stimulus added after a behavior that increases future frequency of that behavior</li><li>Negative reinforcement: removal of a stimulus after a behavior that increases future frequency</li><li>Positive punishment: adding a stimulus that decreases future behavior</li><li>Negative punishment: removing a stimulus that decreases future behavior</li><li>Basic schedules of reinforcement: CRF, FR, VR, FI, VI</li><li>Schedule thinning: systematically reducing reinforcement density</li></ul>" },
+      { heading: "Clinical Application", body: "<p>Apply exploring reinforcement & punishment directly with your clients this week.</p><p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where exploring reinforcement & punishment was directly relevant. What did you notice? What would you do differently?\"</em></p><p>Bring one real example to your supervision session.</p>" }
+    ],
+    questions: [
+      "Describe one client on your caseload where you can identify all four contingencies (positive/negative reinforcement and punishment) in action. How are they interacting?",
+      "Walk through your current reinforcement schedule for one client. Is it on CRF, FR, VR, FI, or VI? How did you decide, and is schedule thinning built into the plan?",
+      "Where do you see the most confusion between negative reinforcement and punishment in your current team? How would you address it in a team meeting?"
+    ],
+    homework: {
+      title: "Week 2 Homework — Concepts, Principles & Strength-Based Approaches",
+      prompt: "Due: Before your Week 3 individual session | Estimated time: 60–75 min\n\nThis week's homework has 3 tasks. Complete all before your next individual supervision session. Your responses should reflect YOUR real caseload and clinical experiences — not hypothetical answers.\n\n**Task 1: Reinforcement Audit (25 min)**\nReview the reinforcer assessments for 2 of your current clients. For each:\n(a) When was it last updated?\n(b) Does it reflect the client's current interests and natural motivators?\n(c) Are sessions using contrived or natural reinforcement?\nBring your audit to supervision.\n\n**Task 2: Language Audit (25 min)**\nFind one recent progress note or report you wrote. Highlight every phrase that uses deficit-based language. Rewrite those phrases using strength-based language. Bring both versions to supervision.\n\n**Task 3: Reflection (15 min)**\nIn your supervision notebook: Describe one moment from your clinical work this week where you noticed yourself using a deficit-based lens. What did you think, say, or do? What would a strength-based response have looked like?\n\n**Rubric Criteria:** Task Completion | Clinical Reasoning | Self-Reflection | Affirming Lens | Writing Quality (Developing → Proficient → Exemplary)"
+    },
+    activity: {
+      title: "Week 2 In-Session Activity Worksheet — Concepts, Principles & Strength-Based Approaches",
+      content: "45 minutes | Complete during supervision session\n\n**Case Vignette 1 — Priya, age 6** (Home-based ABA, early intervention)\nPriya's team uses a dense token economy with small edible reinforcers. She loves dancing, music, and being outside — none incorporated into sessions. Reinforcer assessment done once at intake. Motivation rated 'low.' Current goal: 'Priya will comply with 10 consecutive DTT trials with 90% accuracy.'\n\nQ1. What motivating operations are likely affecting Priya's performance?\nQ2. How would you redesign her reinforcement system using a strength-based approach?\nQ3. Rewrite her goal to be more affirming and functionally meaningful.\nQ4. How would you explain the change in approach to her parents?\n\n**Case Vignette 2 — Elijah, age 11** (School-based ABA, behavior reduction focus)\nElijah's goal: 'reduce verbal outbursts to 0 per day.' Team uses response cost. BCBA report describes him as 'non-compliant, disruptive, attention-seeking.' Teacher notes Elijah is very knowledgeable about dinosaurs and often tries to share facts.\n\nQ1. What function might Elijah's verbal outbursts be serving?\nQ2. How does the BCBA's report reflect a deficit-based lens? Rewrite two sentences using strength-based language.\nQ3. What natural reinforcement opportunity does this scenario present?\nQ4. How would you design an intervention using Elijah's strengths rather than punishing his behavior?\n\n**Case Vignette 3 — Sofia, age 16** (Clinic-based, transition-age services)\nSofia's goals (from standardized checklist): making her bed, loading the dishwasher, saying please and thank you. When asked what she wants to learn, Sofia said she wants to use public transit to visit her friend and text people. These goals are not in her program.\n\nQ1. What philosophical assumption is violated when Sofia's stated preferences are ignored?\nQ2. How does this connect to schedule thinning and generalization?\nQ3. What would a strength-based goal-setting conversation with Sofia look like?\nQ4. Write two new goals based on what Sofia wants, using proper behavioral language.\n\n**Supervisor Debrief**\n• What clinical belief are you questioning after today's activity?\n• What will you do differently with a current client this week?\n• What question do you most want to explore in future sessions?"
+    }
+  },
+
+  "2_4": { // Unit 2, Lesson 4: Verbal Behavior → RW-B1: Embodying a Strength-Based Approach
+    slides: [
+      { heading: "Lesson RW-B1: Embodying a Strength-Based Approach", body: "<p><strong>Week 2 | Real-World Skills: B. Strength-Based Approach</strong></p><ul><li>Reflection on current perspective — where do you land right now?</li><li>What strength-based language IS and ISN'T</li><li>Impact of deficit-focused language on clients and families</li><li>Language shapes how teams, families, and clients see themselves</li></ul>" },
+      { heading: "Clinical Application", body: "<p>Apply embodying a strength-based approach directly with your clients this week.</p><p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where embodying a strength-based approach was directly relevant. What did you notice? What would you do differently?\"</em></p>" }
+    ],
+    questions: [
+      "Review a recent progress note or report you wrote. Find one sentence that uses deficit-based language and rewrite it using a strength-based frame. What changed?",
+      "What is the difference between 'strengths-based language' and just being positive? How do you maintain clinical accuracy while shifting your lens?",
+      "How would you respond to a colleague who says 'strength-based is just feel-good language — we still need to be clinically precise'?"
+    ]
+  },
+
+  "2_5": { // Lesson RW-B2: Strength-Based Language in Action
+    slides: [
+      { heading: "Lesson RW-B2: Strength-Based Language in Action", body: "<p><strong>Week 2 | Real-World Skills: B. Strength-Based Approach</strong></p><ul><li>Before/after language examples from real clinical documents</li><li>Auditing your own reports and goals</li><li>Recommended language, as suggested by autistic self-advocates</li><li>How language affects family trust, team buy-in, and client identity</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where strength-based language in action was directly relevant. What did you notice? What would you do differently?\"</em></p><p>Bring a language audit of one of your own documents to supervision.</p>" }
+    ],
+    questions: [
+      "Find a behavioral goal from your current caseload written in deficit-based language. Rewrite it using strength-based framing without losing behavioral precision.",
+      "What language have autistic self-advocates specifically asked ABA providers to stop using, and why? How does this connect to what we know about verbal behavior?",
+      "What would you say to a parent who is upset that you are 'softening' the language in their child's goals?"
+    ]
+  },
+
+  "2_6": { // Lesson RW-B3: Reinforcement Through a Strength-Based Lens
+    slides: [
+      { heading: "Lesson RW-B3: Reinforcement Through a Strength-Based Lens", body: "<p><strong>Week 2 | Real-World Skills: B. Strength-Based Approach</strong></p><ul><li>Connecting motivating operations (MOs) to client interests and natural motivators</li><li>Natural reinforcement in everyday contexts vs. contrived token economies</li><li>Avoiding artificial, compliance-based reinforcement schedules</li><li>What 'meaningful reinforcement' actually looks like in practice</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where reinforcement through a strength-based lens was directly relevant. What did you notice? What would you do differently?\"</em></p>" }
+    ],
+    questions: [
+      "For one client on your caseload, map their known interests to possible natural reinforcers that could replace or supplement your current contrived reinforcement system.",
+      "What is the clinical risk of relying too heavily on edibles or token economies for a client who is older or has strong verbal behavior?",
+      "How do establishing operations (EOs) relate to incorporating a client's special interests into therapy?"
+    ]
+  },
+
+  // ── WEEK 3: Measurement & Data Systems (Unit index 3)
+  "3_0": { // C1: Defining Behavior with Precision
+    slides: [
+      { heading: "Lesson C1: Defining Behavior with Precision", body: "<p><strong>Week 3 | Task List: C. Measurement, Data Display & Interpretation</strong></p><ul><li>Operational definitions: clear, observable, measurable descriptions of behavior</li><li>Dead man test: if a dead man can do it, it is not a behavior (e.g. 'will not hit')</li><li>Stranger test: a stranger could measure it reliably without asking questions</li><li>Measurability criteria: countable, observable, free from interpretation</li></ul>" },
+      { heading: "Clinical Application", body: "<p>Apply defining behavior with precision directly with your clients this week.</p><p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where defining behavior with precision was directly relevant. What did you notice? What would you do differently?\"</em></p><p>Bring one operational definition from your caseload to review together.</p>" }
+    ],
+    questions: [
+      "Take one behavioral target from your current caseload and run it through both the dead man test and the stranger test. Does it pass? If not, rewrite it.",
+      "What happens clinically when an operational definition is too broad versus too narrow? Give a real example from your experience.",
+      "How do you write an operational definition for an internal state or emotion (like anxiety, happiness, or engagement) that a family is asking you to address?"
+    ],
+    homework: {
+      title: "Week 3 Homework — Measurement & Data Systems",
+      prompt: "Due: Before your Week 4 individual session | Estimated time: 60–75 min\n\nThis week's homework has 3 tasks. Complete all before your next individual supervision session.\n\n**Task 1: IOA Practice (20 min)**\nDownload the IOA Practice Sheet from Google Classroom. Calculate exact count, interval, and trial-by-trial IOA for the three data sets provided. Show all work. Check your answers using the key provided after submission.\n\n**Task 2: Graph Your Own Data (25 min)**\nTake one behavioral goal from your caseload and graph at least 4 data points on the blank equal-interval graph provided. Label: axes, phase line, condition label. Then write 2–3 sentences of visual analysis (level, trend, variability).\n\n**Task 3: HRE Baseline Observation (during client session this week)**\nDuring one session this week, use the HRE Momentary Time Sampling sheet to collect 10 minutes of HRE data on one client. Bring your completed sheet to supervision. No analysis needed yet — just collect.\n\n**Rubric Criteria:** Task Completion | Clinical Reasoning | Self-Reflection | Affirming Lens | Writing Quality (Developing → Proficient → Exemplary)"
+    },
+    activity: {
+      title: "Week 3 In-Session Activity Worksheet — Measurement & Data Systems",
+      content: "45 minutes | Complete during supervision session\n\n**Case Vignette 1 — Tomás, age 8** (Clinic-based DTT, 20 hrs/week)\nTomás shows 85% accuracy on goals. BUT: he frequently cries, tries to leave, covers his ears, and has started biting his hand. These increase over time. Team tracks these separately as 'problem behaviors.' BCBA says: 'His numbers look great — he's doing really well.'\n\nQ1. What critical measurement gap exists in this program?\nQ2. How would you operationally define 'Happy, Relaxed, and Engaged' for Tomás?\nQ3. Design a simple HRE data system the team could start using this week.\nQ4. What clinical decision would you make based on the full picture of Tomás's data?\n\n**Case Vignette 2 — Layla, age 5** (Home-based ABA, early intervention)\nLayla's manding: 2 mands/hour → 18 mands/hour over 6 months (presented as major success). However, last 3 weeks show plateau and slight decrease. Family reports Layla 'seems less interested in therapy lately.'\n\nQ1. Perform a visual analysis: what does the level, trend, and variability tell you?\nQ2. What questions would you ask to understand the recent data change?\nQ3. How would you explain this data pattern to Layla's family in accessible language?\nQ4. What data-based decision would you recommend and why?\n\n**Case Vignette 3 — Jordan, age 10** (non-binary, they/them — Data Design Challenge)\nJordan engages in frequent task refusal during academic work and has limited peer interaction. The family wants to see 'progress' but isn't sure what that means. You need to design a measurement system from scratch.\n\nQ1. Write an operational definition for 'task refusal' that passes the dead man test and stranger test.\nQ2. What measurement system would you choose for task refusal and why?\nQ3. How would you measure HRE for Jordan alongside task refusal?\nQ4. How would you involve the family in defining what 'progress' means for Jordan?\n\n**Supervisor Debrief**\n• What clinical belief are you questioning after today's activity?\n• What will you do differently with a current client this week?\n• What question do you most want to explore in future sessions?"
+    }
+  },
+  "3_1": {
+    slides: [
+      { heading: "Lesson C2: Measuring Behavior Like a Pro", body: "<p><strong>Week 3 | Task List: C. Measurement, Data Display & Interpretation</strong></p><ul><li>Continuous vs. discontinuous measurement systems</li><li>Frequency/rate, duration, latency, interresponse time (IRT)</li><li>Whole-interval, partial-interval, momentary time sampling (MTS)</li><li>Permanent product recording</li><li>How to choose the right measurement system for the right behavior and question</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where measuring behavior like a pro was directly relevant. What did you notice? What would you do differently?\"</em></p>" }
+    ],
+    questions: [
+      "For a high-frequency behavior on your caseload (e.g. hand-flapping, verbal requests), which measurement system is currently being used? Is it the most accurate choice? Why or why not?",
+      "When would you choose partial-interval recording over whole-interval, and what are the known biases of each?",
+      "A team is using frequency data to track 'engagement.' What is the problem with this, and how would you fix it?"
+    ]
+  },
+  "3_2": {
+    slides: [
+      { heading: "Lesson C3: Evaluating & Selecting Measurements", body: "<p><strong>Week 3 | Task List: C. Measurement, Data Display & Interpretation</strong></p><ul><li>Accuracy: does the measure capture what actually happened?</li><li>Validity: does the measure capture what we intend to measure?</li><li>Reliability: is the measure consistent across observers and time?</li><li>Interobserver agreement (IOA): how to calculate and when to collect</li><li>Three IOA formulas: exact count, interval-by-interval, trial-by-trial</li></ul>" },
+      { heading: "IOA Formulas Quick Reference", body: "<p><strong>Exact count IOA:</strong> Smaller count ÷ Larger count × 100</p><p><strong>Interval-by-interval IOA:</strong> Agreements ÷ (Agreements + Disagreements) × 100</p><p><strong>Trial-by-trial IOA:</strong> Trials agreed upon ÷ Total trials × 100</p><p>Acceptable IOA is generally ≥ 80%. Collect on ≥ 20–33% of sessions.</p>" }
+    ],
+    questions: [
+      "When was the last time IOA was collected for one of your clients? What formula was used, and was the result acceptable? If not, what would you do?",
+      "What is the difference between reliability and validity in behavioral measurement? Give a clinical example where you could have high reliability but low validity.",
+      "How would you train a new behavior tech to collect data with adequate reliability for a momentary time sampling system?"
+    ]
+  },
+  "3_3": {
+    slides: [
+      { heading: "Lesson C4: Graphing & Decoding Data", body: "<p><strong>Week 3 | Task List: C. Measurement, Data Display & Interpretation</strong></p><ul><li>Equal-interval graphs (line graphs): standard display for behavioral data</li><li>Bar graphs and cumulative records: when and why to use each</li><li>Phase lines and condition labels: marking experimental changes</li><li>Visual analysis: level, trend, and variability across and within phases</li><li>From data to clinical decisions: asking the right questions about your graph</li></ul>" },
+      { heading: "Visual Analysis Framework", body: "<p><strong>Within-phase analysis:</strong></p><ul><li>Level: what is the mean/median of data in this phase?</li><li>Trend: is data accelerating, decelerating, or flat?</li><li>Variability: how much bounce is there around the trend?</li></ul><p><strong>Between-phase analysis:</strong></p><ul><li>Level change: did mean level shift when phases changed?</li><li>Trend change: did direction change?</li><li>Overlap: how much data overlap between phases?</li></ul>" }
+    ],
+    questions: [
+      "Pull up a graph from your current caseload. Describe it using proper visual analysis language: level, trend, and variability within each phase, and changes between phases.",
+      "A graph shows a decelerating trend with high variability. A team member says 'it's working — look at the downward trend.' What would you add to that interpretation?",
+      "How would you explain a graph showing lack of treatment effect to a family in a way that is honest, compassionate, and action-oriented?"
+    ]
+  },
+  "3_4": { // RW-C1
+    slides: [
+      { heading: "Lesson RW-C1: What Does HRE Mean?", body: "<p><strong>Week 3 | Real-World Skills: C. Happy, Relaxed & Engaged (HRE)</strong></p><ul><li>HRE defined: a client is Happy (positive affect), Relaxed (low physiological arousal), and Engaged (actively participating in meaningful activity)</li><li>Why HRE is a measurable, meaningful outcome — not just a feeling</li><li>HRE vs. compliance as the measure of success: a fundamental reframe</li><li>Reference: Leaf et al. (2022) — A Review of Happy, Relaxed & Engaged, Behavior Analysis in Practice</li></ul>" },
+      { heading: "Clinical Application", body: "<p>Apply what HRE means directly with your clients this week.</p><p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where tracking HRE would have changed your clinical picture. What would you have done differently?\"</em></p>" }
+    ],
+    questions: [
+      "How would you operationally define 'Happy, Relaxed, and Engaged' for one specific client on your caseload? What observable behaviors would indicate each?",
+      "A colleague says 'HRE is subjective and not measurable.' How would you respond using what you know about operational definitions and behavioral measurement?",
+      "If a client is meeting all their skill acquisition goals but is consistently showing low HRE, what clinical decision would you make and how would you present it to the team?"
+    ]
+  },
+  "3_5": { // RW-C2
+    slides: [
+      { heading: "Lesson RW-C2: Measuring What Matters", body: "<p><strong>Week 3 | Real-World Skills: C. Happy, Relaxed & Engaged (HRE)</strong></p><ul><li>How to build an HRE data system that fits your context</li><li>Using momentary time sampling (MTS) to measure HRE — practical and non-intrusive</li><li>Incorporating HRE data into session notes and reports</li><li>What to do when HRE data consistently shows distress</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Describe one client situation this week where measuring what matters (HRE) was directly relevant. What did you notice? What would you do differently?\"</em></p>" }
+    ],
+    questions: [
+      "Design a 10-minute HRE momentary time sampling data sheet for one client. What interval would you use, and what behaviors are your indicators for H, R, and E?",
+      "What would it look like to include HRE data in a monthly progress report? Draft one sentence summarizing HRE results in clinical language.",
+      "When HRE data shows consistent distress during a specific activity or with a specific team member, what is your ethical obligation as the BCBA?"
+    ]
+  },
+  "3_6": { // RW-C3
+    slides: [
+      { heading: "Lesson RW-C3: Parent Coaching on HRE", body: "<p><strong>Week 3 | Real-World Skills: C. Happy, Relaxed & Engaged (HRE)</strong></p><ul><li>Introducing HRE to families: framing it as a meaningful outcome they care about</li><li>Collaborative review of 'Today's ABA' — what are we actually measuring?</li><li>Using HRE data to guide programming conversations and build family trust</li><li>What families often say vs. what they mean when they ask about 'progress'</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"How would you introduce HRE to a family who has been told their child's progress is measured only by skill acquisition data?\"</em></p>" }
+    ],
+    questions: [
+      "Script out how you would introduce the concept of HRE to a family in a parent training session. What language would you use? What data would you show them?",
+      "A parent says 'I don't care if my child is happy — I just want him to learn to read.' How do you respond in a way that is respectful and maintains the therapeutic relationship?",
+      "How does tracking HRE alongside skill data change the conversation at a team meeting or IEP?"
+    ]
+  },
+
+  // ── WEEK 4: Experimental Design + Trauma-Informed (Unit index 4)
+  "4_0": { // D1: Establishing the Basics
+    slides: [
+      { heading: "Lesson D1: Establishing the Basics", body: "<p><strong>Week 4 | Task List: D. Experimental Design</strong></p><ul><li>Single-subject (idiographic) design: why ABA uses individual rather than group data</li><li>Each person serves as their own control — we compare the individual to themselves</li><li>The logic of experimental control: demonstrating a functional relationship between IV and DV</li><li>Why single-subject ≠ anecdotal — replication IS the evidence</li></ul>" },
+      { heading: "Clinical Application", body: "<p>Apply single-subject design logic directly to your current clinical work.</p><p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Look at one of your current clients' data. Are you demonstrating experimental control? What would you need to do to make a stronger claim?\"</em></p>" }
+    ],
+    questions: [
+      "What is a functional relationship, and how does single-subject design allow us to demonstrate one? Give an example from your current caseload.",
+      "Why is replication within and across participants important in single-subject research? How does this apply to clinical decision-making?",
+      "A parent asks 'how do you know the therapy is working and it's not just my child getting older?' How do you answer this using what you know about experimental control?"
+    ],
+    homework: {
+      title: "Week 4 Homework — Experimental Design & Trauma-Informed Practice",
+      prompt: "Due: Before your Week 5 individual session | Estimated time: 60–75 min\n\nThis week's homework has 3 tasks. Complete all before your next individual supervision session.\n\n**Task 1: Design Identification Practice (20 min)**\nUsing the 3 graphs provided in the Graph Practice Packet (attached), identify: (1) the experimental design type, (2) whether experimental control is demonstrated, and (3) one clinical implication of the data. Write 2–3 sentences per graph.\n\n**Task 2: Trauma-Informed BIP Audit (30 min)**\nSelect one BIP from your caseload. Review it through a trauma-informed lens. For each procedure listed:\n(a) Could this procedure be experienced as threatening or re-traumatizing?\n(b) Is there a trauma history documented?\n(c) What modifications would you suggest?\nBring your audit to supervision.\n\n**Task 3: Reflection (15 min)**\nIn your supervision notebook: Has a client ever shown a trauma response during a session? What did it look like? How did the team respond? Looking back, what would a trauma-informed response have looked like?\n\n**Rubric Criteria:** Task Completion | Clinical Reasoning | Self-Reflection | Affirming Lens | Writing Quality (Developing → Proficient → Exemplary)"
+    },
+    activity: {
+      title: "Week 4 In-Session Activity Worksheet — Experimental Design & Trauma-Informed Practice",
+      content: "45 minutes | Complete during supervision session\n\n**Case Vignette 1 — Graph Analysis: Reversal Design**\nA BCBA graphs tantrum frequency: Baseline A1 (avg 8/day) → DRO intervention B1 (avg 2/day) → Return to baseline A2 (avg 7/day) → Reintroduce DRO B2 (avg 1/day). Last phase shows increasing trend in final 3 data points.\n\nQ1. What experimental design is this? What does it demonstrate about experimental control?\nQ2. Perform a visual analysis of each phase: level, trend, variability.\nQ3. What clinical question does the increasing trend in B2 raise?\nQ4. Would you publish these results? What would strengthen this study?\n\n**Case Vignette 2 — Graph Analysis: Multiple Baseline**\nA BCBA implements a self-management intervention for a 12-year-old across three settings: home (starts week 1), school (starts week 4), community (starts week 7). Each baseline shows stable, low self-management. Each intervention phase shows immediate increase following introduction.\n\nQ1. What experimental design is this? Why is staggered introduction important here?\nQ2. What does the pattern of results say about internal validity?\nQ3. What threat to external validity should the BCBA address next?\nQ4. Write one sentence summarizing the results in plain language for the family.\n\n**Case Vignette 3 — Rafi, age 9** (School-based ABA, trauma history disclosed)\nRafi has a history of physical abuse. Current BIP includes: response blocking for hitting, planned ignoring for crying, time-out room for severe behavior. Hitting has not decreased in 6 weeks. He becomes extremely distressed when adults approach him quickly or touch him unexpectedly.\n\nQ1. Which elements of Rafi's current BIP are potentially re-traumatizing? Why?\nQ2. Apply the SAMHSA trauma-informed principles: which are being violated and how?\nQ3. Redesign Rafi's behavioral approach using trauma-informed principles.\nQ4. What information would you add to the FBA to capture his trauma history appropriately?\n\n**Supervisor Debrief**\n• What clinical belief are you questioning after today's activity?\n• What will you do differently with a current client this week?\n• What question do you most want to explore in future sessions?"
+    }
+  },
+  "4_1": {
+    slides: [
+      { heading: "Lesson D2: Balancing Variables & Validity", body: "<p><strong>Week 4 | Task List: D. Experimental Design</strong></p><ul><li>Independent variable (IV): what we manipulate — the intervention</li><li>Dependent variable (DV): what we measure — the target behavior</li><li>Internal validity: did the IV actually cause the change in the DV?</li><li>External validity: do results generalize beyond this person and context?</li><li>Threats: history, maturation, testing effects, instrumentation, attrition</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Identify one threat to internal validity in a current client's program. What could you do to address it?\"</em></p>" }
+    ],
+    questions: [
+      "For one client, identify the independent variable (IV) and dependent variable (DV) in their current behavior plan. Are they clearly defined and separated?",
+      "What threats to internal validity are most common in home-based ABA? How do you control for them clinically?",
+      "A BCBA says 'the behavior decreased, so the intervention worked.' What is missing from this statement, and how do you demonstrate actual experimental control?"
+    ]
+  },
+  "4_2": {
+    slides: [
+      { heading: "Lesson D3: Exploring Experimental Design Types", body: "<p><strong>Week 4 | Task List: D. Experimental Design</strong></p><ul><li>AB (basic) design: baseline then intervention — useful clinically, limited experimentally</li><li>Reversal (ABAB): strongest for demonstrating control, but not always ethical</li><li>Multiple baseline: across behaviors, settings, or participants — no reversal needed</li><li>Multielement / alternating treatments: compare two conditions rapidly</li><li>Changing criterion design: shape behavior toward a criterion in steps</li></ul>" },
+      { heading: "Which Design for Which Question?", body: "<ul><li>Want to demonstrate a functional relationship? → ABAB or multiple baseline</li><li>Can't or won't reverse? → Multiple baseline</li><li>Comparing two interventions? → Multielement/ATD</li><li>Shaping to a standard? → Changing criterion</li><li>Just monitoring? → AB (clinical only, not experimental)</li></ul>" }
+    ],
+    questions: [
+      "You are working with a client who has acquired a skill in one setting but not two others. Which experimental design would you use to document generalization, and why?",
+      "When is it unethical to use a reversal (ABAB) design? Give a clinical example where you would choose a multiple baseline instead.",
+      "A colleague is using an AB design and calling it 'evidence-based.' How do you explain the difference between clinical monitoring and experimental demonstration?"
+    ]
+  },
+  "4_3": {
+    slides: [
+      { heading: "Lesson D4: Interpreting Data Like a Scientist", body: "<p><strong>Week 4 | Task List: D. Experimental Design</strong></p><ul><li>Interpreting experimental control from graphs: what does the pattern tell you?</li><li>Evaluating design adequacy: is there enough data? Enough replication?</li><li>Comparative analysis: comparing two interventions</li><li>Component analysis: which part of the package is doing the work?</li><li>Parametric analysis: how much of something produces the best outcome?</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Bring a graph from your caseload. Can you make a strong claim about experimental control? What else would you need?\"</em></p>" }
+    ],
+    questions: [
+      "Look at a data graph from your current caseload. Can you make a claim about experimental control? What would you need to strengthen that claim?",
+      "What is the difference between a component analysis and a comparative analysis? When would each be clinically useful?",
+      "A graph shows a behavior decreasing, but there is substantial overlap between phases. How do you interpret this, and what does it tell you about the intervention?"
+    ]
+  },
+  "4_4": { // RW-D1: History of Trauma-Informed Practice
+    slides: [
+      { heading: "Lesson RW-D1: History of Trauma-Informed Practice in ABA", body: "<p><strong>Week 4 | Real-World Skills: D. Trauma-Informed Approach</strong></p><ul><li>What trauma is: adverse experiences that overwhelm a person's capacity to cope</li><li>How trauma shows up in clients: avoidance, heightened reactivity, dissociation, behavior that 'doesn't make sense'</li><li>The history of ABA and trauma: what the research says — and what we must reckon with</li><li>Why trauma-informed ≠ trauma therapy: our role and our limits</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Has a client ever shown what you now recognize as a trauma response during a session? What did it look like, and how did the team respond?\"</em></p>" }
+    ],
+    questions: [
+      "What does a trauma response look like in a young child who cannot verbally communicate distress? How might it be misidentified behaviorally?",
+      "What aspects of traditional ABA delivery — even well-intentioned — might be experienced as threatening by a client with a trauma history?",
+      "As a BCBA, what is your ethical obligation when you suspect a client has experienced trauma that is not documented in their file?"
+    ]
+  },
+  "4_5": { // RW-D2
+    slides: [
+      { heading: "Lesson RW-D2: Guidelines for Trauma-Informed ABA", body: "<p><strong>Week 4 | Real-World Skills: D. Trauma-Informed Approach</strong></p><p><strong>The 6 SAMHSA Principles of Trauma-Informed Care:</strong></p><ul><li>Safety: physical and emotional safety for client and family</li><li>Trustworthiness & Transparency: clear expectations, no surprises</li><li>Peer Support: connection and shared experience</li><li>Collaboration & Mutuality: shared power, not doing 'to' clients</li><li>Empowerment & Voice: client choice and self-advocacy</li><li>Cultural, Historical, & Gender Issues: recognizing systemic trauma</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Which of the 6 SAMHSA principles is hardest to implement in your current practice setting? What is one small change you could make this week?\"</em></p>" }
+    ],
+    questions: [
+      "Walk through the 6 SAMHSA trauma-informed principles and evaluate your current supervision or client practice against each one. Where are you strong? Where are there gaps?",
+      "What does 'collaboration and mutuality' look like in practice with a nonverbal client? How do you ensure their voice is represented?",
+      "A team member says 'if we give clients too much choice, they'll never learn to comply.' How do you respond using trauma-informed principles?"
+    ]
+  },
+  "4_6": { // RW-D3
+    slides: [
+      { heading: "Lesson RW-D3: Trauma-Informed BIPs", body: "<p><strong>Week 4 | Real-World Skills: D. Trauma-Informed Approach</strong></p><ul><li>What makes a BIP trauma-informed: safety, choice, co-regulation, and connection first</li><li>Avoiding re-traumatization: reviewing every procedure through a trauma lens</li><li>Common BIP procedures that may be harmful for clients with trauma histories: response blocking, time-out, planned ignoring, hand-over-hand prompting</li><li>Integrating trauma history into the FBA process: asking the right questions</li></ul>" },
+      { heading: "Clinical Application", body: "<p><strong>Supervision Discussion Prompt:</strong></p><p><em>\"Review one BIP from your caseload through a trauma-informed lens. Is there any procedure that could be experienced as threatening or re-traumatizing? What would you change?\"</em></p>" }
+    ],
+    questions: [
+      "Select one procedure from a current BIP and analyze it through the lens of trauma-informed care. Could it be experienced as threatening? What trauma-informed alternative exists?",
+      "How would you write a trauma-informed FBA that captures relevant history without violating privacy or making assumptions?",
+      "A team is resistant to removing a time-out room from a client's BIP because 'it works.' How do you have this conversation using both data and trauma-informed principles?"
+    ]
+  }
+};
+
+// ── CURRICULUM DATA ─────────────────────────────────────
+const CURRICULUM = [
+  { unit:"A Compassionate Approach to Behavior Support", color:"#D85A30", lessons:[
+    { title:"Understanding Neurodiversity-Affirming Practices", subtopics:["Defining neurodiversity","The Autism diagnosis prevalence timeline","Identifying common concerns raised by the neurodivergent community (labels, compliance, stimming, etc.)"] },
+    { title:"Advocating for Neurodiversity-Affirming Practices", subtopics:["Reflecting on experiences","Identifying common pushback phrases and recommending how to respond with advocacy"] },
+    { title:"Embodying a Strength-based Approach", subtopics:["Reflection of their perspective","Strength-based language in action activity","Recommended language from an autistic self-advocate"] },
+    { title:"Promoting Happy, Relaxed, and Engaged", subtopics:["Collaborative review of 'Today's ABA'","Building meaningful rapport","Parent coaching on HRE"] },
+    { title:"Using a Trauma-Informed Approach", subtopics:["The history of trauma-informed approach in ABA","Guidelines for trauma-informed practices","Trauma-informed BIPs"] }
+  ]},
+  { unit:"Behaviorism & Philosophical Foundations", color:"#534AB7", lessons:[
+    { title:"The Building Blocks of ABA", subtopics:["The 7 dimensions of ABA (Applied, Behavioral, Analytic, Technological, Conceptually Systematic, Effective, Generality)"] },
+    { title:"Foundations of Behavior: The Philosophical Roots", subtopics:["Description, prediction, and control as goals of science","The 6 core philosophical assumptions of behavior analysis"] },
+    { title:"The Evolution of Behavior Science", subtopics:["A timeline of the evolution of behavior science","Radical behaviorism & 3 core areas in behavior science"] }
+  ]},
+  { unit:"Concepts & Principles", color:"#0F6E56", lessons:[
+    { title:"Exploring Reinforcement and Punishment", subtopics:["Positive and negative reinforcement","Positive and negative punishment","Basic schedules of reinforcement","Schedule thinning"] },
+    { title:"Shaping Reinforcers and Punishers", subtopics:["Unconditioned, conditioned, and generalized reinforcers","Unconditioned, conditioned, and generalized punishers"] },
+    { title:"Breaking Down Behavior", subtopics:["Behavior, response, and response class","Matching law","Stimulus and stimulus class","Stimulus control","Stimulus discrimination","Stimulus and response generalization","Maintenance","Rule-governed and contingency-shaped behavior","Stimulus equivalence and emergent relations"] },
+    { title:"Understanding Motivation", subtopics:["Establishing and abolishing motivating operations","Value-altering and behavior-altering effects","Unconditioned and conditioned MOs","Motivating operations vs. stimulus control"] },
+    { title:"Talking the Talk: Verbal Behavior", subtopics:["The history of verbal behavior","Verbal operants: definition, tips for teaching, and guidance for programming"] },
+    { title:"Shaping Behavior", subtopics:["Respondent and operant conditioning","Respondent and operant extinction","Automatic and socially mediated contingencies"] },
+    { title:"Deep Dive into Compound Schedules of Reinforcement", subtopics:["The 7 types of compound schedules of reinforcement"] }
+  ]},
+  { unit:"Measurement, Data Display & Interpretation", color:"#BA7517", lessons:[
+    { title:"Defining Behavior with Precision", subtopics:["Operational definitions","Dead man test","Stranger test","Measurability criteria"] },
+    { title:"Measuring Behavior Like a Pro", subtopics:["Continuous vs. discontinuous measurement","Frequency/rate, duration, latency, IRT","Whole-interval, partial-interval, momentary time sampling","Permanent product recording","Choosing the right measurement system"] },
+    { title:"Evaluating and Selecting the Best Measurements", subtopics:["Accuracy, validity, and reliability","Interobserver agreement (IOA): how to calculate, when to use"] },
+    { title:"Graphing Data with Ease", subtopics:["Equal-interval graphs (line graphs)","Bar charts","Cumulative records","When to use each","How to create on Excel and using AI"] },
+    { title:"Decoding Data", subtopics:["Level, trend, variability","Visual analysis practice","'From Data to Decisions' activity"] },
+    { title:"What Does HRE Mean?", subtopics:["Defining Happy, Relaxed, and Engaged operationally","Why HRE is a measurable, meaningful outcome","HRE vs. compliance as the measure of success"] },
+    { title:"Measuring What Matters", subtopics:["How to build an HRE data system","Using momentary time sampling for HRE","Incorporating HRE into session notes and reports"] },
+    { title:"Parent Coaching on HRE", subtopics:["Introducing HRE to families","Collaborative review of 'Today's ABA'","Using HRE data to guide programming conversations"] }
+  ]},
+  { unit:"Experimental Design", color:"#993556", lessons:[
+    { title:"Establishing the Basics", subtopics:["Single-subject design: purpose and structure"] },
+    { title:"Balancing Variables and Validity", subtopics:["Independent and dependent variables","Internal and external validity","Threats to internal and external validity"] },
+    { title:"Exploring Experimental Design Types", subtopics:["Basic (AB design)","Reversal (ABAB)","Withdrawal vs. reversal","Multiple baseline","Multielement design","Changing criterion"] },
+    { title:"Interpreting Data Like a Scientist", subtopics:["Interpreting experimental control","Evaluating the design","Practice interpreting real-world data"] },
+    { title:"Putting Single-Case Designs Into Action", subtopics:["Guidance on when to use which type","'Design it Out' activity"] },
+    { title:"Analyzing Data with a Comparative Lens", subtopics:["Comparative, component, and parametric analyses"] },
+    { title:"History of Trauma-Informed Practice in ABA", subtopics:["What trauma is and how it shows up in clients","The history of ABA and trauma","Why trauma-informed ≠ trauma therapy"] },
+    { title:"Guidelines for Trauma-Informed ABA", subtopics:["The 6 SAMHSA principles of trauma-informed care","Applying each principle to ABA sessions","Recognizing trauma responses in clients"] },
+    { title:"Trauma-Informed BIPs", subtopics:["What makes a BIP trauma-informed","Avoiding re-traumatization","Integrating trauma history into the FBA process"] }
+  ]},
+  { unit:"Ethical & Professional Issues", color:"#185FA5", lessons:[
+    { title:"Responsibility as a Professional", subtopics:["Legal, professional, and cultural obligations","Personal biases, discrimination, and harassment","Dual relationships, gifts, and boundaries","Learning check: Ethical scenarios"] },
+    { title:"Responsibility in Practice", subtopics:["Confidentiality and disclosure","Documentation and record retention","Billing, reporting, and informed consent","Learning check: Ethical scenarios"] },
+    { title:"Responsibility to Clients and Stakeholders", subtopics:["Accepting and contracting for services","Collaborating with providers and stakeholders","Cultural humility in service delivery","Learning check: Ethical scenarios"] },
+    { title:"Responsibility to Supervisees and Trainees", subtopics:["Supervision requirements and documentation","Providing feedback and monitoring performance","Culturally responsive supervision","Learning check: Ethical scenarios"] },
+    { title:"Responsibility in Public Statements", subtopics:["Making ethical public statements","Confidentiality in media and marketing","Social media and digital content guidelines","Learning check: Ethical scenarios"] },
+    { title:"Responsibility in Research", subtopics:["Research laws, review, and informed consent","Confidentiality and competence in research","Plagiarism and use of data","Learning check: Ethical scenarios"] }
+  ]},
+  { unit:"Behavior Assessment", color:"#3B6D11", lessons:[
+    { title:"Gathering Insights", subtopics:["Preparing for an assessment: records review","Preparing for an assessment: parent conversations","Responding to common questions — role plays"] },
+    { title:"Confidently Conducting Skills Assessments", subtopics:["Direct vs. indirect assessments","ABC Data collection","VBMAPP","AFLS","Vineland"] },
+    { title:"Introducing the MOTAS", subtopics:["Socially significant vs. socially valid","Reflection on standardized assessments","Tips for high-quality goals","Introducing a new skills assessment: the MOTAS"] },
+    { title:"Completing Comprehensive FBAs", subtopics:["Step-by-step guide to completing an FBA","Mock FBA activity"] },
+    { title:"Understanding Functional Analyses", subtopics:["Functions of behavior (attention, escape, tangible, automatic)","Functional analysis","Practical functional analysis"] },
+    { title:"Translating Data into Decisions", subtopics:["Analyzing direct and indirect assessment results","Explaining assessment results to families","QABF and FAST"] },
+    { title:"Setting Meaningful, Client-Focused Behavior Goals", subtopics:["Socially significant, client-informed, culturally responsive goals","The Kawa Model","The ADDRESSING Model"] },
+    { title:"Finding Preferences and Motivation", subtopics:["Preference assessments: how to conduct and how to choose"] }
+  ]},
+  { unit:"Behavior-Change Procedures & Interventions", color:"#854F0B", lessons:[
+    { title:"Preventing Challenging Behaviors", subtopics:["Building rapport","Altering the environment","Priming","Easy, Easy, Hard","Visual schedule","Power Card","Noncontingent Reinforcement"] },
+    { title:"Building Motivation", subtopics:["Incorporating special interests","Offering meaningful choices","'First, Then'"] },
+    { title:"Foundations of Teaching", subtopics:["Motivating operations in teaching","Discriminative stimuli","DTT vs NET","Discrimination training"] },
+    { title:"Individualizing our Teaching Approach", subtopics:["Modeling","Role-play","Behavior Skills Training (BST)","Task analysis","Chaining","Shaping"] },
+    { title:"Choosing What we Teach", subtopics:["Functional communication/Self-advocacy","Self-regulation/Co-regulation","Executive functioning skills"] },
+    { title:"Prompting with Care: Neurodiversity-Affirming Strategies", subtopics:["Stimulus vs. response prompts","Prompting hierarchy","Errorless learning","Error correction","Over-prompting"] },
+    { title:"Fading Prompts and Maintaining Progress", subtopics:["Fading stimulus vs. response prompts","Generalization","Maintenance"] },
+    { title:"Understanding Positive and Negative Reinforcement", subtopics:["Technical vs. approachable definition","Behavior-specific praise","Tips for effective reinforcement"] },
+    { title:"Individualizing Reinforcement", subtopics:["DRA, DRI, DRO, DRH, DRL","Token boards, Individual Points Plan, Behavior contracts"] },
+    { title:"Designing Group Contingencies", subtopics:["Independent, interdependent, and dependent group contingencies","The Good Behavior Game"] },
+    { title:"Responding with Care", subtopics:["Extinction and extinction bursts","Pause, Redirect, Reward","RIRD","Least-restrictive blocking"] },
+    { title:"Handling Behavior Escalations", subtopics:["Phases of an escalation cycle","Tips for each phase of an escalation plan"] },
+    { title:"Using Punishment Wisely", subtopics:["Positive and negative punishment","Response cost, time out","Ethical considerations","Emotional risk and mitigation strategies"] },
+    { title:"Building a Tailored BIP", subtopics:["Step-by-step guide to creating a high-quality, visual BIP","Research on BIPs","Barriers to effective BIPs"] },
+    { title:"Setting Effective Behavior Reduction Goals", subtopics:["Developmental norms of challenging behaviors","Setting meaningful goals","Writing replacement behavior goals"] },
+    { title:"Individualizing How you Teach the Team", subtopics:["Research on behavior jargon","BIP approachability check","Tips for gaining buy-in"] },
+    { title:"Making Data-Based Decisions", subtopics:["Monitoring client progress","Questions to assess barriers","Questions to assess procedural fidelity"] },
+    { title:"Collaborating for Better Outcomes", subtopics:["Overview of related service providers","4-Step structured problem solving","Collaborative language"] },
+    { title:"Building Strong Supervisory Relationships", subtopics:["Supervision contracts and clear expectations","Feedback: research and actionable tips","Promoting equity"] },
+    { title:"Assessing and Improving Supervisee Performance", subtopics:["PDC-HS","Setting supervision goals","Performance management strategies"] },
+    { title:"Structuring Supervision Sessions That Work", subtopics:["Setting up for success","Structuring supervision sessions with and without clients"] },
+    { title:"Managing Difficult Staff Situations", subtopics:["Performance management plan and talk","The COIN Method"] }
+  ]}
+];
+
+// ── READING GUIDE DATA ───────────────────────────────────
+const READING_GUIDES = {
+  "2_0": { // Unit 2 (Concepts & Principles), Lesson 0 — Week 2 guide applies to all of unit 2
+    week: 2, title: "Week 2: Concepts, Principles & Strength-Based Approaches",
+    domains: ["Task List: B. Concepts and Principles | Items B.1-B.8","Real-World Skills: B. Strength-Based Approach | Items B.1-B.8"],
+    readings: [
+      { num:"1", source:"Cooper et al. Ch. 4: Reinforcement — Positive & Negative", focus:"Core definitions & schedules" },
+      { num:"2", source:"Cooper et al. Ch. 5: Punishment", focus:"Ethics, definitions, side effects" },
+      { num:"3", source:"Cooper et al. Ch. 16: Motivating Operations", focus:"EOs, AOs, value/behavior-altering effects" },
+      { num:"4", source:"Prizant & Fields-Meyer (2015) — Uniquely Human, Ch. 1", focus:"Strength-based, humanizing perspective" },
+      { num:"5", source:"APBA (2021) — Guidance on Humanistic ABA Practice", focus:"Applied affirming principles" }
+    ],
+    studyQ: [
+      "Define and give a clinical example of each key concept from B. Concepts and Principles.",
+      "How do the concepts from B. Concepts and Principles directly apply to one of your current clients? Be specific.",
+      "What does B. Strength-Based Approach look like in practice? Describe one way you will apply it this week.",
+      "What is one concept from this week's readings that challenges your current practice? What will you change?",
+      "How do the Task List concepts and the Real-World skills connect to each other this week? Where do they overlap?",
+      "What question from this week's content do you most want to discuss in supervision? Write it out clearly."
+    ],
+    selfAssess: ["B1 — Exploring Reinforcement & Punishment","B2 — Shaping Reinforcers & Punishers","B3 — Breaking Down Behavior","B4 — Understanding Motivation","RW-B1 — Embodying a Strength-Based Approach","RW-B2 — Strength-Based Language in Action","RW-B3 — Reinforcement Through a Strength-Based Lens"]
+  },
+  "3_0": {
+    week: 3, title: "Week 3: Measurement & Data Systems",
+    domains: ["Task List: C. Measurement, Data Display & Interpretation | Items C.1-C.12","Real-World Skills: C. Happy, Relaxed & Engaged (HRE) | Items C.1-C.8"],
+    readings: [
+      { num:"1", source:"Cooper et al. Ch. 3: Measurement of Behavior", focus:"Core measurement concepts & IOA" },
+      { num:"2", source:"Cooper et al. Ch. 6: Constructing & Interpreting Graphic Displays", focus:"Visual analysis fundamentals" },
+      { num:"3", source:"Leaf et al. (2022) — A Review of Happy, Relaxed & Engaged. Behavior Analysis in Practice", focus:"HRE defined & applied" },
+      { num:"4", source:"Hume et al. (2021) — Evidence-Based Practices for Children with Autism, Ch. 2", focus:"Data-based decision making" },
+      { num:"5", source:"Sandbank et al. (2020) — Project AIM meta-analysis (abstract only)", focus:"Outcome measurement in ABA" }
+    ],
+    studyQ: [
+      "Define and give a clinical example of each key concept from C. Measurement, Data Display & Interpretation.",
+      "How do the concepts from C. Measurement, Data Display & Interpretation directly apply to one of your current clients? Be specific.",
+      "What does C. Happy, Relaxed & Engaged (HRE) look like in practice? Describe one way you will apply it this week.",
+      "What is one concept from this week's readings that challenges your current practice? What will you change?",
+      "How do the Task List concepts and the Real-World skills connect to each other this week? Where do they overlap?",
+      "What question from this week's content do you most want to discuss in supervision? Write it out clearly."
+    ],
+    selfAssess: ["C1 — Defining Behavior with Precision","C2 — Measuring Behavior Like a Pro","C3 — Evaluating & Selecting Measurements","C4 — Graphing & Decoding Data","RW-C1 — What Does HRE Mean?","RW-C2 — Measuring What Matters","RW-C3 — Parent Coaching on HRE"]
+  },
+  "4_0": {
+    week: 4, title: "Week 4: Experimental Design & Trauma-Informed Practice",
+    domains: ["Task List: D. Experimental Design | Items D.1-D.9","Real-World Skills: D. Trauma-Informed Approach | Items D.1-D.9"],
+    readings: [
+      { num:"1", source:"Cooper et al. Ch. 7: Single-Subject Research Designs", focus:"Core experimental design content" },
+      { num:"2", source:"Barlow & Hersen (1984) — Single Case Experimental Designs, Ch. 3 (excerpt)", focus:"Historical & methodological context" },
+      { num:"3", source:"SAMHSA (2014) — Trauma-Informed Approach: Key Assumptions & Principles", focus:"TIC framework" },
+      { num:"4", source:"Hoover & Romero (2019) — Trauma-Informed ABA. Behavior Analysis in Practice", focus:"Applying TIC to ABA practice" },
+      { num:"5", source:"Levine & Kline (2007) — Trauma Through a Child's Eyes, Introduction", focus:"Child trauma for non-therapists" }
+    ],
+    studyQ: [
+      "Define and give a clinical example of each key concept from D. Experimental Design.",
+      "How do the concepts from D. Experimental Design directly apply to one of your current clients? Be specific.",
+      "What does D. Trauma-Informed Approach look like in practice? Describe one way you will apply it this week.",
+      "What is one concept from this week's readings that challenges your current practice? What will you change?",
+      "How do the Task List concepts and the Real-World skills connect to each other this week? Where do they overlap?",
+      "What question from this week's content do you most want to discuss in supervision? Write it out clearly."
+    ],
+    selfAssess: ["D1 — Establishing the Basics","D2 — Balancing Variables & Validity","D3 — Exploring Design Types","D4 — Interpreting Data Like a Scientist","RW-D1 — History of Trauma-Informed Practice","RW-D2 — Guidelines for Trauma-Informed ABA","RW-D3 — Trauma-Informed BIPs"]
+  }
+};
+
+// ── DEFAULTS ─────────────────────────────────────────────
+function defaultDiscussion(title, subtopics) {
+  return [
+    `Reflecting on "${title}" — how does this concept connect to your current caseload or fieldwork experience?`,
+    `What is one subtopic from "${subtopics[0]||'this lesson'}" that challenged your thinking? Explain why.`,
+    `How would you explain the main idea of this lesson to a parent or paraprofessional in simple, jargon-free language?`
+  ];
+}
+function defaultHomework(title, subtopics) {
+  return {
+    title: `${title} — Applied reflection`,
+    prompt: `For this lesson, complete the following:\n\n1. In 2–3 paragraphs, summarize the core concepts covered in "${title}."\n2. Identify one specific way you will apply what you learned in your current fieldwork placement.\n3. Bring one real-world example from your practice that connects to the content covered this week.\n\nSubtopics covered: ${subtopics.join(', ')}.`
+  };
+}
+const DEFAULT_RESOURCES = [
+  { name:'BACB Ethics Code (2020)', category:'Required reading', type:'PDF', url:'https://www.bacb.com/wp-content/uploads/2020/11/Ethics-Code-for-Behavior-Analysts-210428.pdf' },
+  { name:'BACB Task List — 6th Edition', category:'Required reading', type:'PDF', url:'https://www.bacb.com/wp-content/uploads/2022/01/BCBATaskList-231017.pdf' },
+  { name:'BACB Supervision Standards', category:'Required reading', type:'Link', url:'https://www.bacb.com/supervision-requirements/' },
+  { name:'Supervision log template', category:'Tools & templates', type:'Template', url:'' },
+  { name:'FBA template', category:'Tools & templates', type:'Template', url:'' },
+  { name:'BIP template', category:'Tools & templates', type:'Template', url:'' },
+  { name:'Autistic Self Advocacy Network (ASAN)', category:'Additional reading', type:'Link', url:'https://autisticadvocacy.org' },
+  { name:'Behavior Analysis in Practice (journal)', category:'Additional reading', type:'Link', url:'https://link.springer.com/journal/40617' }
+];
+
+// ── WEEK CONTENT HELPERS ─────────────────────────────────
+function getWeekContent(ui, li) { return WEEK_CONTENT[`${ui}_${li}`] || null; }
+function getReadingGuide(ui, li) {
+  // Reading guide lives on lesson 0 of each unit that has week content
+  // but also shared: unit 2 = Week 2, unit 3 = Week 3, unit 4 = Week 4
+  const key = `${ui}_0`;
+  return READING_GUIDES[key] || null;
+}
+
+
+// ── SUPABASE CONFIG & INIT ────────────────────────────────
+const CFG_KEY = 'bcba_supabase_cfg';
+let supabase = null;
+
+function loadSupabaseConfig() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch(e) { return null; }
+}
+function saveSupabaseConfig() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg-key').value.trim();
+  const err = document.getElementById('cfg-error');
+  if (!url || !url.startsWith('https://')) { err.textContent = 'Please enter a valid Supabase URL (starts with https://).'; return; }
+  if (!key || key.length < 20) { err.textContent = 'Please enter your Supabase anon key.'; return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({ url, key }));
+  location.reload();
+}
+
+async function initSupabase() {
+  const cfg = loadSupabaseConfig();
+  if (!cfg) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    return false;
+  }
+  try {
+    supabase = window.supabase.createClient(cfg.url, cfg.key);
+    // Quick connectivity check
+    await supabase.from('shared_data').select('key').limit(1);
+    return true;
+  } catch(e) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    document.getElementById('cfg-error').textContent = 'Could not connect. Check your URL and key.';
+    const cfgObj = loadSupabaseConfig();
+    if (cfgObj) { document.getElementById('cfg-url').value = cfgObj.url; document.getElementById('cfg-key').value = cfgObj.key; }
+    return false;
+  }
+}
+
+// ── IN-MEMORY CACHE (so sync accessors still work after data is loaded) ──
+const _cache = { user: {}, shared: {} };
+
+async function cacheLoad() {
+  // Load all shared data
+  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
+  // Load all data for current user
+  if (currentUser && currentUser.id) {
+    const { data: ud } = await supabase.from('user_data').select('key,value').eq('user_id', currentUser.id);
+    (ud || []).forEach(r => { _cache.user[r.key] = r.value; });
+  }
+}
+
+async function uSaveDB(k, v) {
+  _cache.user[k] = v;
+  if (!currentUser?.id) return;
+  await supabase.from('user_data').upsert({ user_id: currentUser.id, key: k, value: v }, { onConflict: 'user_id,key' });
+}
+async function sSaveDB(k, v) {
+  _cache.shared[k] = v;
+  await supabase.from('shared_data').upsert({ key: k, value: v }, { onConflict: 'key' });
+}
+function uLoad(k, def)  { const v = _cache.user[k];   return (v !== undefined && v !== null) ? v : def; }
+function sLoad(k, def)  { const v = _cache.shared[k]; return (v !== undefined && v !== null) ? v : def; }
+function uSave(k, v)    { uSaveDB(k, v); }   // fire-and-forget for sync call sites
+function sSave(k, v)    { sSaveDB(k, v); }
+
+// Typed accessors (sync reads from cache — always valid after cacheLoad())
+const getDiscAns    = (u,l,q) => uLoad(`disc_${u}_${l}_${q}`, '');
+const saveDiscAns   = (u,l,q,v) => uSave(`disc_${u}_${l}_${q}`, v);
+const getHW         = (u,l) => uLoad(`hw_${u}_${l}`, {text:'',submitted:false,feedback:''});
+const saveHW        = (u,l,d) => uSave(`hw_${u}_${l}`, d);
+const getCC         = (u,l) => sLoad(`cc_${u}_${l}`, null);
+const saveCC        = (u,l,d) => sSave(`cc_${u}_${l}`, d);
+const getLocks      = () => sLoad('locks', {});
+const saveLocks     = (s) => sSave('locks', s);
+const getResources  = () => sLoad('resources', DEFAULT_RESOURCES);
+const saveResources = (r) => sSave('resources', r);
+
+// ── AUTH ─────────────────────────────────────────────────
+let currentUser = null;
+let currentRole = null;
+let currentUnitIdx = 0, currentLessonIdx = 0, currentSlideIdx = 0;
+
+function showAuthTab(tab) {
+  ['signin','signup','supervisor'].forEach(t => {
+    const panel = document.getElementById('auth-' + t);
+    const btn   = document.getElementById('lt-' + t);
+    if (panel) panel.style.display = (t === tab) ? '' : 'none';
+    if (btn)   btn.classList.toggle('active', t === tab);
+  });
+  ['si-error','su-error','sp-error'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '';
+  });
+}
+
+function setAuthLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId); if (!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading ? `<span class="auth-loading"></span>${label}` : label;
+}
+
+async function signUp() {
+  const name  = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim().toLowerCase();
+  const pw    = document.getElementById('su-pass').value;
+  const pw2   = document.getElementById('su-pass2').value;
+  const err   = document.getElementById('su-error');
+  err.textContent = '';
+  if (!name)                         { err.textContent = 'Please enter your name.'; return; }
+  if (!email || !email.includes('@')) { err.textContent = 'Please enter a valid email.'; return; }
+  if (pw.length < 6)                 { err.textContent = 'Password must be at least 6 characters.'; return; }
+  if (pw !== pw2)                    { err.textContent = 'Passwords do not match.'; return; }
+  setAuthLoading('su-btn', true, 'Creating account…');
+  const { data, error } = await supabase.auth.signUp({ email, password: pw, options: { data: { full_name: name } } });
+  setAuthLoading('su-btn', false, 'Create account');
+  if (error) { err.textContent = error.message; return; }
+  if (!data.user) { err.textContent = 'Sign-up failed. Please try again.'; return; }
+  // Store display name in user_data
+  currentUser = { id: data.user.id, email, name };
+  currentRole = 'trainee';
+  await cacheLoad();
+  await uSaveDB('profile', { name, email });
+  enterApp();
+}
+
+async function signIn() {
+  const email = document.getElementById('si-email').value.trim().toLowerCase();
+  const pw    = document.getElementById('si-pass').value;
+  const err   = document.getElementById('si-error');
+  err.textContent = '';
+  if (!email) { err.textContent = 'Please enter your email.'; return; }
+  if (!pw)    { err.textContent = 'Please enter your password.'; return; }
+  setAuthLoading('si-btn', true, 'Signing in…');
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+  setAuthLoading('si-btn', false, 'Sign in');
+  if (error) { err.textContent = error.message; return; }
+  const name = data.user.user_metadata?.full_name || email.split('@')[0];
+  currentUser = { id: data.user.id, email, name };
+  currentRole = 'trainee';
+  await cacheLoad();
+  // Restore saved name if available
+  const profile = uLoad('profile', null);
+  if (profile?.name) currentUser.name = profile.name;
+  enterApp();
+}
+
+async function signInSupervisor() {
+  const pw  = document.getElementById('sp-pass').value.trim();
+  const err = document.getElementById('sp-error');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'Please enter the supervisor password.'; return; }
+  setAuthLoading('sp-btn', true, 'Signing in…');
+  // Load shared data first so we can check the stored password
+  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
+  setAuthLoading('sp-btn', false, 'Sign in as supervisor');
+  const DEFAULT_SUP_PW = 'supervisor123';
+  const custom = sLoad('sup_password', null);
+  const valid  = custom ? pw === custom : pw === DEFAULT_SUP_PW;
+  if (!valid) { err.textContent = 'Incorrect password. Default is: supervisor123'; return; }
+  currentUser = { id: 'supervisor', email: 'supervisor', name: 'Supervisor' };
+  currentRole = 'supervisor';
+  // No user_data rows needed for supervisor
+  enterApp();
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('welcome-name').textContent = currentUser.name.split(' ')[0];
+  document.getElementById('user-display-name').textContent = currentUser.name;
+  const emailDisp = document.getElementById('user-email-display');
+  if (emailDisp) emailDisp.textContent = currentUser.email !== 'supervisor' ? currentUser.email : '';
+  const av = document.getElementById('user-avatar');
+  av.textContent = currentUser.name.charAt(0).toUpperCase();
+  if (currentRole === 'supervisor') {
+    av.classList.add('sup');
+    document.getElementById('app-layout').classList.add('supervisor-view');
+    document.querySelectorAll('.sup-only').forEach(el => {
+      el.style.display = el.tagName === 'BUTTON' ? 'flex' : 'block';
+    });
+  }
+  initApp();
+}
+
+async function logout() {
+  if (currentRole !== 'supervisor') await supabase.auth.signOut();
+  currentUser = null; currentRole = null;
+  _cache.user = {}; _cache.shared = {};
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('app-layout').classList.remove('supervisor-view');
+  document.querySelectorAll('.sup-only').forEach(el => el.style.display = 'none');
+  ['si-email','si-pass','su-name','su-email','su-pass','su-pass2','sp-pass'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  showAuthTab('signin');
+}
+
+// ── STARTUP ───────────────────────────────────────────────
+(async () => {
+  const ok = await initSupabase();
+  if (!ok) return;
+
+  // Check for existing session
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    const u = session.user;
+    const name = u.user_metadata?.full_name || u.email.split('@')[0];
+    currentUser = { id: u.id, email: u.email, name };
+    currentRole = 'trainee';
+    await cacheLoad();
+    const profile = uLoad('profile', null);
+    if (profile?.name) currentUser.name = profile.name;
+    document.getElementById('loading-overlay').style.display = 'none';
+    enterApp();
+  } else {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+})();
+
+// ── ACCESS CONTROLS ──────────────────────────────────────
+function isUnlocked(ui, li) {
+  const s = getLocks();
+  if (!s || Object.keys(s).length === 0) return true;
+  if (s[ui] === undefined) return true;
+  if (s[ui][li] === undefined) return true;
+  return s[ui][li];
+}
+function toggleLessonLock(ui, li, val) {
+  const s = getLocks();
+  if (!s[ui]) s[ui] = {};
+  s[ui][li] = val;
+  saveLocks(s);
+  buildDashboard();
+  const lbl = document.getElementById(`lbl-${ui}-${li}`);
+  if (lbl) lbl.textContent = val ? 'Unlocked' : 'Locked';
+  showToast(val ? 'Lesson unlocked!' : 'Lesson locked!');
+}
+function toggleUnitLock(ui, val) {
+  const s = getLocks();
+  s[ui] = {};
+  CURRICULUM[ui].lessons.forEach((_, li) => s[ui][li] = val);
+  saveLocks(s);
+  buildAccessControls();
+  buildDashboard();
+  showToast(val ? 'Unit unlocked!' : 'Unit locked!');
+}
+function setAllAccess(val) {
+  const s = {};
+  CURRICULUM.forEach((u, ui) => { s[ui] = {}; u.lessons.forEach((_, li) => s[ui][li] = val); });
+  saveLocks(s);
+  buildAccessControls();
+  buildDashboard();
+  showToast(val ? 'All lessons unlocked!' : 'All lessons locked!');
+}
+function buildAccessControls() {
+  const c = document.getElementById('access-controls-list'); if (!c) return;
+  c.innerHTML = '';
+  CURRICULUM.forEach((u, ui) => {
+    const unlocked = u.lessons.filter((_, li) => isUnlocked(ui, li)).length;
+    const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
+    const rows = u.lessons.map((l, li) => {
+      const on = isUnlocked(ui, li);
+      return `<tr><td class="lname">${li+1}. ${l.title}</td><td style="width:140px"><label class="toggle-wrap"><label class="toggle"><input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)"><span class="toggle-slider"></span></label><span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span></label></td></tr>`;
+    }).join('');
+    card.innerHTML = `<div class="unit-lock-header"><div><div style="font-size:13px;font-weight:600;color:var(--gray-800)">Unit ${ui+1}: ${u.unit}</div><div style="font-size:11px;color:var(--gray-400);margin-top:2px">${u.lessons.length} lessons · ${unlocked} unlocked</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button><button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button></div></div><table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
+    c.appendChild(card);
+  });
+}
+
+// ── RESOURCES ────────────────────────────────────────────
+const TYPE_ICON  = {PDF:'📄',Link:'🔗',Template:'📋',Article:'📰'};
+const TYPE_CLASS = {PDF:'res-pdf',Link:'res-link',Template:'res-doc',Article:'res-link'};
+function addResource() {
+  const name     = document.getElementById('new-res-name').value.trim();
+  const url      = document.getElementById('new-res-url').value.trim();
+  const category = document.getElementById('new-res-cat').value;
+  const type     = document.getElementById('new-res-type').value;
+  if (!name) { showToast('Please enter a resource name.'); return; }
+  const r = getResources(); r.push({name,url,category,type}); saveResources(r);
+  document.getElementById('new-res-name').value = '';
+  document.getElementById('new-res-url').value  = '';
+  buildManageResources(); buildTraineeResources();
+  showToast('Resource added!');
+}
+function deleteResource(idx) {
+  const r = getResources(); r.splice(idx,1); saveResources(r);
+  buildManageResources(); buildTraineeResources(); showToast('Resource removed.');
+}
+function buildManageResources() {
+  const c = document.getElementById('resource-manage-list'); if (!c) return;
+  const resources = getResources();
+  const cats = [...new Set(resources.map(r => r.category))];
+  c.innerHTML = '';
+  if (!resources.length) { c.innerHTML = '<div class="empty-state"><p>No resources yet.</p></div>'; return; }
+  cats.forEach(cat => {
+    const items = resources.map((r,i) => ({...r,i})).filter(r => r.category === cat);
+    if (!items.length) return;
+    const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
+    card.innerHTML = `<div class="card-title">${cat}</div>` + items.map(r => `<div class="res-manage-row"><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--gray-800)">${r.name}</div><div style="font-size:11px;color:var(--gray-400)">${r.type}${r.url?' · '+r.url.replace(/^https?:\/\//,'').split('/')[0]:' · No link'}</div></div><button class="res-del" onclick="deleteResource(${r.i})">Remove</button></div>`).join('');
+    c.appendChild(card);
+  });
+}
+function buildTraineeResources() {
+  const c = document.getElementById('trainee-resources-body'); if (!c) return;
+  const resources = getResources();
+  const cats = [...new Set(resources.map(r => r.category))];
+  if (!resources.length) { c.innerHTML = '<div class="empty-state"><p>No resources have been added yet.</p></div>'; return; }
+  c.innerHTML = cats.map(cat => {
+    const items = resources.filter(r => r.category === cat);
+    return `<div class="card" style="margin-bottom:1rem"><div class="card-title">${cat}</div>${items.map(r=>`<div class="resource-item"><div class="resource-icon ${TYPE_CLASS[r.type]||'res-link'}">${TYPE_ICON[r.type]||'🔗'}</div><div class="resource-info"><div class="resource-name">${r.name}</div><div class="resource-meta">${r.type}${r.url?' · '+r.url.replace(/^https?:\/\//,'').split('/')[0]:''}</div></div>${r.url?`<a href="${r.url}" target="_blank"><button class="btn btn-sm">Open</button></a>`:`<button class="btn btn-sm" disabled>No link</button>`}</div>`).join('')}</div>`;
+  }).join('');
+}
+
+// ── SUPERVISOR: TRAINEE LIST ──────────────────────────────
+async function loadTraineeList() {
+  const c = document.getElementById('trainee-list-content'); if (!c) return;
+  c.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading…</div>';
+  // Fetch all profile rows from user_data
+  const { data, error } = await supabase.from('user_data').select('user_id,value').eq('key','profile');
+  if (error || !data || !data.length) {
+    c.innerHTML = '<div class="empty-state"><p>No trainees have signed up yet.</p></div>'; return;
+  }
+  c.innerHTML = data.map(row => {
+    const t = row.value || {};
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+      <div>
+        <div style="font-size:13.5px;font-weight:500;color:var(--gray-800)">${t.name || 'Unknown'}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${t.email || ''}</div>
+      </div>
+      <span class="badge badge-teal">Active</span>
+    </div>`;
+  }).join('');
+}
+
+// ── INIT ─────────────────────────────────────────────────
+function initApp(){buildDashboard();buildCurriculumGrid();populateAllSelects();buildTraineeResources();if(currentRole==='supervisor'){buildAccessControls();buildManageResources();populateReviewSelect();loadReview();populateManageSelects();renderManageForm();}}
+
+// ── NAVIGATION ───────────────────────────────────────────
+function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');}
+
+// ── DASHBOARD ────────────────────────────────────────────
+function buildDashboard(){
+  const grid=document.getElementById('dash-unit-grid');if(!grid)return;grid.innerHTML='';
+  let unlocked=0,done=0;
+  CURRICULUM.forEach((u,ui)=>{let uDone=0,uUnlocked=0;for(let li=0;li<u.lessons.length;li++){if(isUnlocked(ui,li)){unlocked++;uUnlocked++;}const hw=getHW(ui,li);if(hw.submitted){done++;uDone++;}}const pct=uUnlocked?Math.round(uDone/uUnlocked*100):0;const card=document.createElement('div');card.className='unit-card';if(uDone>0)card.style.borderLeftColor=u.color;card.innerHTML=`<div class="unit-number">Unit ${ui+1} · ${uUnlocked}/${u.lessons.length} unlocked</div><div class="unit-name">${u.unit}</div><div class="unit-meta" style="color:${u.color}">${pct}% complete</div><div class="unit-progress"><div class="unit-bar" style="width:${pct}%;background:${u.color}"></div></div>`;card.onclick=()=>{showPage('curriculum',document.querySelector('[data-page="curriculum"]'));showLessonList(ui);};grid.appendChild(card);});
+  document.getElementById('stat-unlocked').textContent=unlocked;document.getElementById('stat-done').textContent=done;
+}
+
+// ── CURRICULUM ───────────────────────────────────────────
+function buildCurriculumGrid(){
+  const grid=document.getElementById('curr-unit-grid');if(!grid)return;grid.innerHTML='';
+  CURRICULUM.forEach((u,ui)=>{
+    let unlockedCount=0;for(let li=0;li<u.lessons.length;li++){if(isUnlocked(ui,li))unlockedCount++;}
+    const hasGuide=!!READING_GUIDES[`${ui}_0`];
+    const card=document.createElement('div');card.className='unit-card';
+    card.innerHTML=`<div class="unit-number">Unit ${ui+1} · ${unlockedCount}/${u.lessons.length} lessons</div>
+      <div class="unit-name">${u.unit}</div>
+      <div class="content-badges">${hasGuide?'<span class="cb cb-guide">Reading guide</span>':''}${u.lessons.some((_,li)=>getWeekContent(ui,li))? '<span class="cb cb-slides">Slides</span><span class="cb cb-activity">Activity</span><span class="cb cb-hw">Homework</span>':''}</div>`;
+    card.onclick=()=>showLessonList(ui);
+    grid.appendChild(card);
+  });
+}
+function showUnitList(){document.getElementById('curriculum-unit-view').style.display='';document.getElementById('curriculum-lesson-view').style.display='none';document.getElementById('curriculum-content-view').style.display='none';buildCurriculumGrid();}
+function showLessonList(ui){
+  currentUnitIdx=ui;const u=CURRICULUM[ui];
+  document.getElementById('curriculum-unit-view').style.display='none';
+  document.getElementById('curriculum-lesson-view').style.display='';
+  document.getElementById('curriculum-content-view').style.display='none';
+  document.getElementById('lesson-breadcrumb-unit').textContent=u.unit;
+  document.getElementById('lesson-unit-title').textContent=u.unit;
+  document.getElementById('lesson-unit-desc').textContent=`Unit ${ui+1} · ${u.lessons.length} lessons`;
+  const list=document.getElementById('lesson-list');list.innerHTML='';
+  u.lessons.forEach((l,li)=>{
+    const unlocked=isUnlocked(ui,li);const hw=getHW(ui,li);const done=hw.submitted;
+    const wc=getWeekContent(ui,li);const rg=li===0?getReadingGuide(ui,li):null;
+    const item=document.createElement('li');item.className='lesson-item'+(unlocked?'':' locked');
+    const badges=[(wc&&wc.slides)?'<span class="cb cb-slides">Slides</span>':'',(rg)?'<span class="cb cb-guide">Reading guide</span>':'',(wc&&wc.activity)?'<span class="cb cb-activity">Activity</span>':'',(wc&&wc.homework)?'<span class="cb cb-hw">Homework</span>':''].filter(Boolean).join('');
+    item.innerHTML=`<div class="lesson-num ${done?'done':''}">${done?'✓':li+1}</div>
+      <div class="lesson-info"><div class="lesson-title">${l.title}</div>
+      <div class="lesson-sub">${l.subtopics.length} subtopics${unlocked?'':' · 🔒 Locked'}</div>
+      ${badges?`<div class="content-badges" style="margin-top:4px">${badges}</div>`:''}</div>
+      <span class="lesson-status ${done?'status-done':'status-locked'}">${done?'Complete':unlocked?'Not started':'Locked'}</span>`;
+    if(unlocked)item.onclick=()=>showLessonContent(ui,li);
+    list.appendChild(item);
+  });
+}
+function showLessonContent(ui,li){
+  currentUnitIdx=ui;currentLessonIdx=li;currentSlideIdx=0;
+  const u=CURRICULUM[ui];const l=u.lessons[li];
+  document.getElementById('curriculum-lesson-view').style.display='none';
+  document.getElementById('curriculum-content-view').style.display='';
+  document.getElementById('cbu').textContent=u.unit;
+  document.getElementById('cbl').textContent=l.title;
+  document.getElementById('slide-unit-label').textContent=`Unit ${ui+1} — ${u.unit}`;
+  document.getElementById('slide-title').textContent=l.title;
+
+  // Get content
+  const wc=getWeekContent(ui,li);
+  const custom=getCC(ui,li);
+  const rg=li===0?getReadingGuide(ui,li):null; // reading guide on first lesson of unit
+
+  // Slides
+  let slides;
+  if(custom&&custom.slides) slides=custom.slides;
+  else if(wc&&wc.slides) slides=wc.slides;
+  else slides=buildDefaultSlides(l);
+  renderSlide(slides,0);
+
+  // Key concepts
+  document.getElementById('concept-chips').innerHTML=l.subtopics.map(s=>`<span class="concept-chip">${s}</span>`).join('');
+
+  // Show/hide Reading Guide tab
+  const tabGuide=document.getElementById('tab-guide');
+  const tabActivity=document.getElementById('tab-activity');
+  if(rg){tabGuide.style.display='';renderReadingGuide(rg);}else{tabGuide.style.display='none';document.getElementById('content-guide').innerHTML='';}
+  if(wc&&wc.activity){tabActivity.style.display='';renderActivity(wc.activity);}else{tabActivity.style.display='none';document.getElementById('content-activity').innerHTML='';}
+
+  // Reset tabs
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[onclick="switchContentTab(\'slides\',this)"]').classList.add('active');
+  document.getElementById('content-slides').classList.add('active');
+}
+
+function renderReadingGuide(rg){
+  const c=document.getElementById('content-guide');
+  const readingsHtml=rg.readings.map(r=>`<div class="reading-item"><span class="reading-num">${r.num}.</span><div><div>${r.source}</div><div class="reading-focus">${r.focus}</div></div></div>`).join('');
+  const studyHtml=rg.studyQ.map((q,i)=>`<div style="padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:13.5px;color:var(--gray-600)"><strong style="color:var(--gray-800)">${i+1}.</strong> ${q}</div>`).join('');
+  const selfHtml=rg.selfAssess.map(s=>`<tr><td class="skill-name">${s}</td><td style="color:var(--gray-400);font-style:italic">Rate yourself after reading →</td></tr>`).join('');
+  c.innerHTML=`<div class="card">
+    <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${rg.title}</div>
+    <div class="reading-section"><h3>Domains covered</h3>${rg.domains.map(d=>`<div style="font-size:13px;color:var(--gray-600);padding:4px 0">${d}</div>`).join('')}</div>
+    <div class="reading-section"><h3>Required readings</h3>${readingsHtml}</div>
+  </div>
+  <div class="card">
+    <div class="reading-section"><h3>Study questions</h3><p style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Answer these before your supervision session. Use your readings to support your answers.</p>${studyHtml}</div>
+  </div>
+  <div class="card">
+    <div class="reading-section"><h3>Self-assessment</h3><p style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Rate yourself after reading. Bring ratings to your supervision session.</p>
+    <table class="self-assess-table"><tbody>${selfHtml}</tbody></table></div>
+    <div class="rating-scale"><strong>Rating scale:</strong> Not yet learned · Can explain conceptually · Can apply in practice · Confident and independent</div>
+  </div>`;
+}
+
+function renderActivity(act){
+  const c=document.getElementById('content-activity');
+  // Parse the activity content into vignettes
+  const lines=act.content.split('\n');
+  let html=`<div class="card"><div class="card-title">${act.title}</div><p style="font-size:13px;color:var(--gray-400);margin-bottom:1rem">In-session activity · 45 minutes · Complete during supervision session</p>`;
+  let inVignette=false;let vignetteHtml='';let vigTitle='';let vigSetting='';let vigScenario='';let vigQ=[];
+  lines.forEach(line=>{
+    line=line.trim();
+    if(line.startsWith('**Case Vignette')||line.startsWith('Case Vignette')){
+      if(inVignette&&vigTitle){html+=buildVignetteHtml(vigTitle,vigSetting,vigScenario,vigQ);vigQ=[];}
+      vigTitle=line.replace(/\*\*/g,'');vigSetting='';vigScenario='';vigQ=[];inVignette=true;
+    }else if(inVignette&&line.startsWith('Q')){vigQ.push(line.replace(/^Q\d+\.\s*/,''));}
+    else if(inVignette&&vigTitle&&!vigScenario&&line.length>20&&!line.startsWith('Q')&&!line.startsWith('**Supervisor')){vigScenario+=line+' ';}
+    else if(line.startsWith('**Supervisor Debrief')){
+      if(inVignette&&vigTitle){html+=buildVignetteHtml(vigTitle,vigSetting,vigScenario,vigQ);}inVignette=false;
+    }
+  });
+  // Debrief
+  const debriefLines=lines.filter(l=>l.startsWith('•')).map(l=>l.replace('•','').trim());
+  if(debriefLines.length){html+=`<div class="debrief-box"><div class="debrief-label">Supervisor debrief — key takeaways</div>${debriefLines.map(q=>`<div class="debrief-q">${q}</div>`).join('')}</div>`;}
+  html+='</div>';
+  c.innerHTML=html;
+}
+function buildVignetteHtml(title,setting,scenario,qs){
+  return`<div class="vignette"><div class="vignette-label">${title}</div><div class="vignette-scenario">${scenario.trim()}</div>${qs.map((q,i)=>`<div class="vignette-q"><strong>Q${i+1}.</strong> ${q}</div>`).join('')}</div>`;
+}
+
+function buildDefaultSlides(l){
+  const slides=[{heading:l.title,body:`<p>This lesson covers:</p><ul>${l.subtopics.map(s=>`<li>${s}</li>`).join('')}</ul>`}];
+  l.subtopics.forEach(sub=>slides.push({heading:sub,body:`<p>Content for <strong>${sub}</strong> will appear here.</p><p>Your supervisor will add theory notes, definitions, and clinical examples for this topic.</p>`}));
+  return slides;
+}
+function renderSlide(slides,idx){const s=slides[idx];document.getElementById('slide-body').innerHTML=`<h3>${s.heading}</h3><div style="margin-top:10px">${s.body}</div>`;document.getElementById('slide-counter').textContent=`Slide ${idx+1} of ${slides.length}`;currentSlideIdx=idx;window._slides=slides;}
+function prevSlide(){if(window._slides&&currentSlideIdx>0)renderSlide(window._slides,currentSlideIdx-1);}
+function nextSlide(){if(window._slides&&currentSlideIdx<window._slides.length-1)renderSlide(window._slides,currentSlideIdx+1);}
+function switchContentTab(tab,btn){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('content-'+tab).classList.add('active');}
+
+// ── DISCUSSION ───────────────────────────────────────────
+function populateAllSelects(){
+  const opts=CURRICULUM.map((u,i)=>`<option value="${i}">Unit ${i+1}: ${u.unit}</option>`).join('');
+  ['discussion-unit-select','hw-unit-select'].forEach(id=>{const s=document.getElementById(id);if(s)s.innerHTML=opts;});
+  loadDiscussionLessons();loadHWLessons();
+}
+function loadDiscussionLessons(){
+  const ui=parseInt(document.getElementById('discussion-unit-select').value);
+  const s=document.getElementById('discussion-lesson-select');
+  s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');
+  loadDiscussionQuestions();
+}
+function loadDiscussionQuestions(){
+  const ui=parseInt(document.getElementById('discussion-unit-select').value);
+  const li=parseInt(document.getElementById('discussion-lesson-select').value);
+  if(!isUnlocked(ui,li)){document.getElementById('discussion-questions').innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked. Your supervisor will unlock it when it\'s time.</p></div>';return;}
+  const l=CURRICULUM[ui].lessons[li];
+  const custom=getCC(ui,li);
+  const wc=getWeekContent(ui,li);
+  const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
+  const c=document.getElementById('discussion-questions');c.innerHTML='';
+  qs.forEach((q,qi)=>{
+    const saved=getDiscAns(ui,li,qi);
+    const div=document.createElement('div');div.className='discussion-q';
+    div.innerHTML=`<div class="dq-header"><div class="dq-num">${qi+1}</div><div class="dq-text">${q}</div></div>
+      <div class="dq-body"><textarea id="dq-${qi}" placeholder="Type your response here...">${saved}</textarea>
+      <div class="dq-actions"><span class="saved-indicator${saved?' show':''}" id="si-${qi}">${saved?'✓ Saved':''}</span>
+      <button class="btn btn-sm btn-primary" onclick="saveDiscQ(${ui},${li},${qi})">Save response</button></div></div>`;
+    c.appendChild(div);
+  });
+}
+function saveDiscQ(ui,li,qi){const val=document.getElementById(`dq-${qi}`).value;saveDiscAns(ui,li,qi,val);const ind=document.getElementById(`si-${qi}`);ind.textContent='✓ Saved';ind.classList.add('show');showToast('Response saved!');}
+
+// ── HOMEWORK ─────────────────────────────────────────────
+function loadHWLessons(){const ui=parseInt(document.getElementById('hw-unit-select').value);const s=document.getElementById('hw-lesson-select');s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');loadHWContent();}
+function loadHWContent(){
+  const ui=parseInt(document.getElementById('hw-unit-select').value);
+  const li=parseInt(document.getElementById('hw-lesson-select').value);
+  const c=document.getElementById('hw-content');
+  if(!isUnlocked(ui,li)){c.innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked.</p></div>';return;}
+  const l=CURRICULUM[ui].lessons[li];
+  const custom=getCC(ui,li);const wc=getWeekContent(ui,li);
+  const hw=custom&&custom.homework?custom.homework:(wc&&wc.homework?wc.homework:defaultHomework(l.title,l.subtopics));
+  const saved=getHW(ui,li);const submitted=saved.submitted;
+  c.innerHTML=`<div class="hw-prompt"><div class="hw-prompt-label">Assignment</div><div class="hw-prompt-title">${hw.title}</div><div class="hw-prompt-body">${hw.prompt}</div></div>
+    ${saved.feedback?`<div class="card" style="border-left:4px solid var(--teal)"><div class="card-title" style="color:var(--teal)">Supervisor feedback</div><p style="font-size:14px;color:var(--gray-600)">${saved.feedback}</p></div>`:''}
+    <div class="card"><div class="card-title">${submitted?'Your submission (submitted)':'Your submission'}</div>
+    <textarea id="hw-text" style="min-height:140px" ${submitted?'disabled':''} placeholder="Type or paste your homework here...">${saved.text||''}</textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+    ${submitted?`<span class="badge badge-teal" style="align-self:center">✓ Submitted</span>`:
+    `<button class="btn btn-sm" onclick="saveHWDraft(${ui},${li})">Save draft</button><button class="btn btn-sm btn-primary" onclick="submitHW(${ui},${li})">Submit homework</button>`}
+    </div></div>`;
+}
+function saveHWDraft(ui,li){const text=document.getElementById('hw-text').value;const s=getHW(ui,li);saveHW(ui,li,{...s,text});showToast('Draft saved!');}
+function submitHW(ui,li){const text=document.getElementById('hw-text').value;if(!text.trim()){showToast('Please write your response before submitting.');return;}saveHW(ui,li,{text,submitted:true,feedback:'',submittedBy:currentUser.name,submittedAt:new Date().toLocaleDateString()});loadHWContent();buildDashboard();showToast('Homework submitted!');}
+
+// ── REVIEW ───────────────────────────────────────────────
+function populateReviewSelect(){const s=document.getElementById('review-unit-select');if(!s)return;s.innerHTML=`<option value="-1">All units</option>`+CURRICULUM.map((u,i)=>`<option value="${i}">Unit ${i+1}: ${u.unit}</option>`).join('');}
+async function loadReview(){
+  const s=document.getElementById('review-unit-select');if(!s)return;const fu=parseInt(s.value);
+  const c=document.getElementById('review-content');c.innerHTML='<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading submissions…</div>';
+
+  // Fetch all hw_ and disc_ keys from ALL users (supervisor only)
+  const { data: allRows } = await supabase.from('user_data').select('user_id,key,value');
+  // Also reload shared data cache
+  const { data: sd } = await supabase.from('shared_data').select('key,value');
+  (sd||[]).forEach(r=>{ _cache.shared[r.key]=r.value; });
+  // Build a per-user cache
+  const byUser = {};
+  (allRows||[]).forEach(r => {
+    if(!byUser[r.user_id]) byUser[r.user_id]={};
+    byUser[r.user_id][r.key]=r.value;
+  });
+
+  c.innerHTML='';let found=false;
+  Object.entries(byUser).forEach(([uid, udata])=>{
+    const profile=udata['profile']||{};
+    const traineeLabel=profile.name||profile.email||uid.substring(0,8);
+    CURRICULUM.forEach((u,ui)=>{if(fu!==-1&&fu!==ui)return;u.lessons.forEach((l,li)=>{
+      const hw=udata[`hw_${ui}_${li}`]||{text:'',submitted:false,feedback:''};
+      if(hw.submitted){found=true;const d=document.createElement('div');d.className='submission-card';
+        d.innerHTML=`<div class="submission-header"><div><div class="submission-name">${traineeLabel} — ${l.title}</div><div class="submission-meta">Unit ${ui+1} · Submitted ${hw.submittedAt||'recently'}</div></div><span class="badge ${hw.feedback?'badge-teal':'badge-amber'}">${hw.feedback?'Reviewed':'Needs review'}</span></div><div class="submission-body"><div class="submission-text">${hw.text}</div><div><div class="form-label" style="margin-bottom:5px">Feedback for trainee</div><textarea id="fb-${uid}-${ui}-${li}" style="min-height:70px" placeholder="Leave written feedback here...">${hw.feedback||''}</textarea><div class="submission-actions" style="margin-top:8px"><button class="btn btn-sm btn-primary" onclick="saveFeedback('${uid}',${ui},${li})">Save feedback</button></div></div></div>`;
+        c.appendChild(d);}
+      const wc=getWeekContent(ui,li);const custom=getCC(ui,li);
+      const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
+      qs.forEach((q,qi)=>{const ans=(udata[`disc_${ui}_${li}_${qi}`]||'');if(ans&&ans.trim()){found=true;const d=document.createElement('div');d.className='submission-card';d.innerHTML=`<div class="submission-header"><div><div class="submission-name">${traineeLabel} — Discussion: ${l.title} (Q${qi+1})</div><div class="submission-meta">Unit ${ui+1} · ${q.substring(0,70)}...</div></div><span class="badge badge-teal">Answered</span></div><div class="submission-body"><div class="submission-text">${ans}</div></div>`;c.appendChild(d);}});
+    });});
+  });
+  if(!found)c.innerHTML='<div class="empty-state"><p>No submissions yet.</p></div>';
+}
+async function saveFeedback(uid,ui,li){
+  const fb=document.getElementById(`fb-${uid}-${ui}-${li}`).value;
+  // Load the specific hw row for this user directly
+  const { data } = await supabase.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
+  const hw=data?.value||{text:'',submitted:false,feedback:''};
+  await supabase.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb}},{onConflict:'user_id,key'});
+  showToast('Feedback saved!');loadReview();
+}
+
+// ── MANAGE CONTENT ───────────────────────────────────────
+function populateManageSelects(){const s=document.getElementById('manage-unit-select');if(!s)return;s.innerHTML=CURRICULUM.map((u,i)=>`<option value="${i}">Unit ${i+1}: ${u.unit}</option>`).join('');loadManageLessons();}
+function loadManageLessons(){const ui=parseInt(document.getElementById('manage-unit-select').value);const s=document.getElementById('manage-lesson-select');if(!s)return;s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');renderManageForm();}
+function renderManageForm(){
+  const ui=parseInt(document.getElementById('manage-unit-select').value);const li=parseInt(document.getElementById('manage-lesson-select').value);if(isNaN(ui)||isNaN(li))return;
+  const l=CURRICULUM[ui].lessons[li];const custom=getCC(ui,li);const wc=getWeekContent(ui,li);
+  const hw=custom&&custom.homework?custom.homework:(wc&&wc.homework?wc.homework:defaultHomework(l.title,l.subtopics));
+  const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
+  const slides=custom&&custom.slides?custom.slides:(wc&&wc.slides?wc.slides:null);
+  const slideRaw=slides?slides.map(s=>s.heading+'\n'+s.body.replace(/<[^>]+>/g,'').trim()).join('\n\n---\n\n'):'';
+  const c=document.getElementById('manage-content-area');
+  c.innerHTML=`<div class="card"><div class="card-title">Theory / slide content</div><p style="font-size:12px;color:var(--gray-400);margin-bottom:8px">Separate slides with a line containing only: <code>---</code></p><textarea id="mg-slides" style="min-height:140px;font-family:monospace;font-size:13px" placeholder="Slide 1 heading\nSlide 1 content\n\n---\n\nSlide 2 heading\nSlide 2 content">${slideRaw}</textarea></div>
+    <div class="card"><div class="card-title">Discussion questions <span style="font-weight:400;color:var(--gray-400)">(one per line)</span></div><textarea id="mg-questions" style="min-height:90px">${qs.join('\n')}</textarea></div>
+    <div class="card"><div class="card-title">Homework prompt</div><div class="form-group" style="margin-bottom:10px"><label class="form-label">Assignment title</label><input type="text" id="mg-hw-title" value="${hw.title}"/></div><div class="form-group"><label class="form-label">Instructions</label><textarea id="mg-hw-prompt" style="min-height:110px">${hw.prompt}</textarea></div></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:1.5rem"><button class="btn" onclick="renderManageForm()">Reset</button><button class="btn btn-primary" onclick="saveManageForm(${ui},${li})">Save changes</button></div>`;
+}
+function saveManageForm(ui,li){
+  const slideRaw=document.getElementById('mg-slides').value;const qRaw=document.getElementById('mg-questions').value;const hwTitle=document.getElementById('mg-hw-title').value;const hwPrompt=document.getElementById('mg-hw-prompt').value;
+  const slides=slideRaw.trim()?slideRaw.split(/\n---\n/).map(block=>{const lines=block.trim().split('\n');return{heading:lines[0]||'',body:lines.slice(1).join('<br>')||'<p>Content coming soon.</p>'};}) :null;
+  const questions=qRaw.split('\n').map(q=>q.trim()).filter(Boolean);
+  saveCC(ui,li,{slides,questions:questions.length?questions:null,homework:hwTitle||hwPrompt?{title:hwTitle,prompt:hwPrompt}:null});
+  showToast('Content saved!');
+}
+
+// ── UTILS ────────────────────────────────────────────────
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+</script></body></html>
