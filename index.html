@@ -236,7 +236,7 @@ input:focus,select:focus{border-color:var(--coral)}
 <div id="setup-screen" style="display:none">
   <div class="setup-card">
     <h2>Connect to Supabase</h2>
-    <p>Your Supabase credentials haven't been added to the file yet. Open <strong>index.html</strong> in a text editor, find the two lines near the top of the script that say <code>https://azrfgrevhwfosjroxohe.supabase.co</code> and <code>sb_publishable_CYu4y1jZn7m7w0yujahUpw_GHECmdvW</code>, and replace them with your actual values. Then re-upload to GitHub.</p>
+    <p>Your Supabase credentials haven't been added to the file yet. Open <strong>index.html</strong> in a text editor, find the two lines near the top of the script that say <code>PASTE_YOUR_PROJECT_URL_HERE</code> and <code>PASTE_YOUR_PUBLISHABLE_KEY_HERE</code>, and replace them with your actual values. Then re-upload to GitHub.</p>
     <div class="setup-step"><strong>Step 1 — Create a free project</strong><br>Go to <a href="https://supabase.com" target="_blank" style="color:var(--coral)">supabase.com</a> → New project. Note your Project URL and anon key (Settings → API).</div>
     <div class="setup-step"><strong>Step 2 — Run this SQL</strong> in the Supabase SQL editor:<br>
 <code style="display:block;white-space:pre;font-size:11px;margin-top:6px;line-height:1.6">create table if not exists user_data (
@@ -928,7 +928,7 @@ async function initSupabase() {
 
 function saveSupabaseConfig() {
   document.getElementById('cfg-error').textContent =
-    'To connect, open index.html in a text editor and replace https://azrfgrevhwfosjroxohe.supabase.co and sb_publishable_CYu4y1jZn7m7w0yujahUpw_GHECmdvW with your actual values.';
+    'To connect, open index.html in a text editor and replace PASTE_YOUR_PROJECT_URL_HERE and PASTE_YOUR_PUBLISHABLE_KEY_HERE with your actual values.';
 }
 
 // ── IN-MEMORY CACHE (so sync accessors still work after data is loaded) ──
