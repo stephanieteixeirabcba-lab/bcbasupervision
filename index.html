@@ -485,6 +485,7 @@ create policy "Authenticated can write shared" on shared_data
     <button class="nav-item sup-only" style="display:none" data-page="manage-resources" onclick="showPage('manage-resources',this)"><span class="nav-dot dot-amber"></span> Manage resources</button>
     <button class="nav-item sup-only" style="display:none" data-page="trainees" onclick="showPage('trainees',this);loadTraineeList()"><span class="nav-dot dot-blue"></span> Trainees</button>
     <button class="nav-item sup-only" style="display:none" data-page="quiz-results" onclick="showPage('quiz-results',this);loadQuizResults()"><span class="nav-dot dot-coral"></span> Quiz results</button>
+    <button class="nav-item sup-only" style="display:none" data-page="grades" onclick="showPage('grades',this);loadGradesSummary()"><span class="nav-dot dot-amber"></span> Grades summary</button>
   </nav>
 
   <main class="main-content">
@@ -692,6 +693,11 @@ create policy "Authenticated can write shared" on shared_data
         </div>
         <div id="trainee-detail-content"></div>
       </div>
+    </section>
+    <!-- GRADES SUMMARY -->
+    <section class="page" id="page-grades">
+      <div class="page-header"><h1>Grades summary</h1><p>All trainee homework grades at a glance</p></div>
+      <div id="grades-summary-content"><div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading…</div></div>
     </section>
   </main>
 </div>
@@ -1665,12 +1671,169 @@ async function viewTrainee(uid, name, email){
   c.innerHTML=html;
 }
 
-// Quick grade modal opened from trainee detail view
-function openGradeModal(uid,ui,li){
-  // Navigate to review page filtered for this submission
-  showPage('review', document.querySelector('[data-page="review"]'));
-  const sel=document.getElementById('review-unit-select');
-  if(sel){sel.value=ui;loadReview();}
+// Inline grade panel inside trainee detail view
+async function openGradeModal(uid, ui, li){
+  const panelId = `grade-panel-${uid}-${ui}-${li}`;
+  // Toggle — if already open, close it
+  const existing = document.getElementById(panelId);
+  if(existing){ existing.remove(); return; }
+
+  // Fetch latest hw data
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
+  const hw = data?.value || {};
+  const rubric = hw.rubric || {};
+  const overallGrade = hw.overallGrade || '';
+
+  const rubricInputs = RUBRIC_CRITERIA.map(cr=>`
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:5px">${cr}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${['Developing','Proficient','Exemplary'].map(lvl=>`
+          <button class="rubric-option${rubric[cr]===lvl?' selected-'+lvl.toLowerCase():''}"
+            onclick="setInlineRubric('${uid}',${ui},${li},'${cr}','${lvl}',this)">
+            ${lvl}
+          </button>`).join('')}
+      </div>
+    </div>`).join('');
+
+  const panel = document.createElement('div');
+  panel.id = panelId;
+  panel.style.cssText = 'background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:var(--radius-lg);padding:1.25rem;margin-top:10px';
+  panel.innerHTML = `
+    <div class="card-title" style="margin-bottom:1rem">Grade this submission</div>
+    ${rubricInputs}
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:5px">Overall grade</div>
+      <select id="inline-overall-${uid}-${ui}-${li}" style="font-family:var(--font-body);font-size:13px;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);width:100%">
+        <option value="">Select overall grade…</option>
+        <option${overallGrade==='Developing'?' selected':''}>Developing</option>
+        <option${overallGrade==='Proficient'?' selected':''}>Proficient</option>
+        <option${overallGrade==='Exemplary'?' selected':''}>Exemplary</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:5px">Written feedback</div>
+      <textarea id="inline-fb-${uid}-${ui}-${li}" style="min-height:80px" placeholder="Leave feedback for this trainee…">${hw.feedback||''}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="document.getElementById('${panelId}').remove()">Cancel</button>
+      <button class="btn btn-sm btn-primary" onclick="saveInlineGrade('${uid}',${ui},${li})">Save grade ✅</button>
+    </div>`;
+
+  // Insert after the Grade button's parent div
+  const btn = document.querySelector(`[onclick="openGradeModal('${uid}',${ui},${li})"]`);
+  if(btn) btn.closest('div').after(panel);
+  else document.getElementById('trainee-detail-content').appendChild(panel);
+}
+
+async function saveInlineGrade(uid, ui, li){
+  const panelId = `grade-panel-${uid}-${ui}-${li}`;
+  const fb = document.getElementById(`inline-fb-${uid}-${ui}-${li}`)?.value || '';
+  const overall = document.getElementById(`inline-overall-${uid}-${ui}-${li}`)?.value || '';
+  const rkey = `${uid}_${ui}_${li}`;
+  const rubric = (window._rubricTemp&&window._rubricTemp[rkey]) || {};
+
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
+  const hw = data?.value || {};
+  const updated = {...hw, feedback:fb, overallGrade:overall, rubric:{...hw.rubric,...rubric}};
+  const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
+  if(error){ showToast('Error: '+error.message); return; }
+
+  if(window._rubricTemp&&window._rubricTemp[rkey]) delete window._rubricTemp[rkey];
+  showToast('✅ Grade saved!');
+  document.getElementById(panelId)?.remove();
+  // Reload trainee detail to show updated grade
+  const nameEl = document.querySelector('#trainee-detail-content .welcome-banner h2');
+  const emailEl = document.querySelector('#trainee-detail-content .welcome-banner p');
+  if(nameEl) viewTrainee(uid, nameEl.textContent, emailEl?.textContent||'');
+}
+
+function setInlineRubric(uid,ui,li,criterion,level,btn){
+  btn.closest('div').querySelectorAll('.rubric-option').forEach(b=>b.className='rubric-option');
+  btn.className=`rubric-option selected-${level.toLowerCase()}`;
+  const key=`${uid}_${ui}_${li}`;
+  if(!window._rubricTemp) window._rubricTemp={};
+  if(!window._rubricTemp[key]) window._rubricTemp[key]={};
+  window._rubricTemp[key][criterion]=level;
+}
+
+// ── GRADES SUMMARY ───────────────────────────────────────
+async function loadGradesSummary(){
+  const c = document.getElementById('grades-summary-content'); if(!c) return;
+  c.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:13px">Loading grades…</div>';
+
+  // Fetch all user_data rows
+  const {data:allRows, error} = await _sb.from('user_data').select('user_id,key,value');
+  if(error){ c.innerHTML=`<div class="card"><p style="color:#c0392b">${error.message}</p></div>`; return; }
+
+  // Build per-user data map
+  const byUser = {};
+  const profiles = {};
+  (allRows||[]).forEach(r=>{
+    if(!byUser[r.user_id]) byUser[r.user_id]={};
+    byUser[r.user_id][r.key] = r.value;
+    if(r.key==='profile') profiles[r.user_id] = r.value;
+  });
+
+  // Collect all lessons that have any submissions
+  const lessonKeys = [];
+  CURRICULUM.forEach((u,ui)=>u.lessons.forEach((l,li)=>{
+    const hasAny = Object.values(byUser).some(ud=>ud[`hw_${ui}_${li}`]?.submitted);
+    if(hasAny) lessonKeys.push({ui,li,label:`${u.unit.substring(0,20)}… — ${l.title.substring(0,25)}…`});
+  }));
+
+  if(!lessonKeys.length){
+    c.innerHTML='<div class="empty-state"><p>No graded submissions yet.</p></div>'; return;
+  }
+
+  const GRADE_COLOR = {Exemplary:'var(--teal)',Proficient:'var(--blue)',Developing:'#D97706','':`var(--gray-400)`};
+
+  // Build table
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:white;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)">
+    <thead><tr style="background:var(--gray-50)">
+      <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--gray-400);border-bottom:1px solid var(--gray-100);white-space:nowrap">Trainee</th>
+      ${lessonKeys.map(k=>`<th style="padding:12px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-400);border-bottom:1px solid var(--gray-100);max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${CURRICULUM[k.ui].unit} — ${CURRICULUM[k.ui].lessons[k.li].title}">
+        L${k.ui+1}.${k.li+1}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+  Object.entries(byUser).forEach(([uid, udata])=>{
+    const p = profiles[uid]||{};
+    const initials = (p.name||'?').split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2);
+    html+=`<tr style="border-bottom:1px solid var(--gray-100)">
+      <td style="padding:10px 14px;white-space:nowrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:30px;height:30px;border-radius:50%;background:var(--coral-light);color:var(--coral-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--gray-800)">${p.name||'Unknown'}</div>
+            <div style="font-size:11px;color:var(--gray-400)">${p.email||''}</div>
+          </div>
+        </div>
+      </td>
+      ${lessonKeys.map(k=>{
+        const hw = udata[`hw_${k.ui}_${k.li}`]||{};
+        if(!hw.submitted) return `<td style="padding:10px;text-align:center;font-size:12px;color:var(--gray-200)">—</td>`;
+        const g = hw.overallGrade||'';
+        const col = GRADE_COLOR[g]||'var(--gray-400)';
+        return `<td style="padding:10px;text-align:center">
+          <span style="font-size:12px;font-weight:700;color:${col}">${g||'Not graded'}</span>
+          ${hw.feedback?'<div style="font-size:10px;color:var(--teal);margin-top:2px">✓ feedback</div>':''}
+        </td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+
+  // Legend
+  html += `<div style="display:flex;gap:12px;margin-top:1rem;flex-wrap:wrap;font-size:12px;color:var(--gray-400)">
+    <span>Column headers = Unit.Lesson number</span>
+    <span style="color:var(--teal)">■ Exemplary</span>
+    <span style="color:var(--blue)">■ Proficient</span>
+    <span style="color:#D97706">■ Developing</span>
+    <span>— = Not submitted</span>
+  </div>`;
+
+  c.innerHTML = html;
 }
 
 // ── INIT ─────────────────────────────────────────────────
@@ -1888,6 +2051,37 @@ async function loadForumQuestions(){
   const keys=qs.map((_,qi)=>`forum_${ui}_${li}_${qi}`);
   const {data:rows}=await _sb.from('shared_data').select('key,value').in('key',keys);
   const postMap={};(rows||[]).forEach(r=>{ postMap[r.key]=r.value||[]; });
+
+  // Migrate any old private disc_ answers into the forum (runs once per trainee per question)
+  if(currentUser?.id && currentRole !== 'supervisor'){
+    const migratedKey = `forum_migrated_${ui}_${li}`;
+    const alreadyMigrated = uLoad(migratedKey, false);
+    if(!alreadyMigrated){
+      const migratePromises = qs.map(async (_,qi)=>{
+        const oldAns = uLoad(`disc_${ui}_${li}_${qi}`,'');
+        if(!oldAns || !oldAns.trim()) return;
+        const fkey = `forum_${ui}_${li}_${qi}`;
+        const existing = postMap[fkey] || [];
+        // Only migrate if this user hasn't already posted
+        const alreadyPosted = existing.some(p=>p.uid===currentUser.id);
+        if(alreadyPosted) return;
+        const migratedPost = {
+          uid: currentUser.id,
+          name: currentUser.name,
+          role: 'trainee',
+          text: oldAns,
+          ts: 'Earlier response (migrated)',
+          migrated: true
+        };
+        existing.push(migratedPost);
+        postMap[fkey] = existing;
+        await _sb.from('shared_data').upsert({key:fkey, value:existing},{onConflict:'key'});
+        _cache.shared[fkey] = existing;
+      });
+      await Promise.all(migratePromises);
+      uSave(migratedKey, true);
+    }
+  }
 
   c.innerHTML='';
   qs.forEach((q,qi)=>{
