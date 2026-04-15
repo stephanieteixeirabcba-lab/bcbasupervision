@@ -1626,18 +1626,21 @@ async function viewTrainee(uid, name, email){
       if(!hw.submitted) return null;
       const grade=hw.overallGrade||'';
       const gradeBadge=grade?`<span class="grade-badge grade-${grade.toLowerCase()}" style="font-size:11px;padding:3px 10px">${grade}</span>`:'<span style="font-size:11px;color:var(--gray-400)">Not graded</span>';
+      const redoBadge=hw.redoRequested?`<span style="font-size:11px;background:var(--amber-light);color:var(--amber);padding:3px 8px;border-radius:10px;font-weight:600">🔄 Redo requested</span>`:'';
       const rubric=hw.rubric||{};
       const rubricHtml=Object.keys(rubric).length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${Object.entries(rubric).map(([cr,lvl])=>`<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--gray-100);color:var(--gray-600)">${cr}: <strong>${lvl}</strong></span>`).join('')}</div>`:'';
       return `<div style="padding:14px 0;border-bottom:1px solid var(--gray-100)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">
           <div style="font-size:13.5px;font-weight:600;color:var(--gray-800)">${l.title}</div>
-          ${gradeBadge}
+          <div style="display:flex;gap:6px;align-items:center">${redoBadge}${gradeBadge}</div>
         </div>
         <div style="font-size:13px;color:var(--gray-600);background:var(--gray-50);padding:10px 12px;border-radius:var(--radius);line-height:1.6;max-height:100px;overflow-y:auto">${hw.text||''}</div>
         ${rubricHtml}
         ${hw.feedback?`<div style="margin-top:8px;padding:8px 12px;background:var(--teal-light);border-radius:var(--radius);font-size:13px;color:var(--teal)"><strong>Your feedback:</strong> ${hw.feedback}</div>`:''}
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-sm btn-primary" onclick="openGradeModal('${uid}',${ui},${li})">Grade / edit feedback</button>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="openGradeModal('${uid}',${ui},${li})">✏️ Grade / feedback</button>
+          <button class="btn btn-sm" style="border-color:var(--amber);color:var(--amber)" onclick="requestRedo('${uid}',${ui},${li},'${name}')">🔄 Request redo</button>
+          <button class="btn btn-sm" style="border-color:#E53E3E;color:#E53E3E" onclick="deleteSubmission('${uid}',${ui},${li},'${name}')">🗑 Delete</button>
         </div>
       </div>`;
     }).filter(Boolean);
@@ -1724,6 +1727,30 @@ async function openGradeModal(uid, ui, li){
   const btn = document.querySelector(`[onclick="openGradeModal('${uid}',${ui},${li})"]`);
   if(btn) btn.closest('div').after(panel);
   else document.getElementById('trainee-detail-content').appendChild(panel);
+}
+
+async function deleteSubmission(uid, ui, li, name){
+  if(!confirm(`Delete ${name}'s submission for this lesson? This cannot be undone.`)) return;
+  // Reset the hw row to blank (keep text as draft but mark unsubmitted)
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
+  const hw = data?.value || {};
+  const reset = {text: hw.text||'', submitted:false, feedback:'', overallGrade:'', rubric:{}, redoRequested:false};
+  const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:reset},{onConflict:'user_id,key'});
+  if(error){ showToast('Error: '+error.message); return; }
+  showToast('✅ Submission deleted — trainee can resubmit');
+  viewTrainee(uid, name, '');
+}
+
+async function requestRedo(uid, ui, li, name){
+  if(!confirm(`Request ${name} to redo this submission? They will see a notice and be able to resubmit.`)) return;
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
+  const hw = data?.value || {};
+  // Keep their text visible but unlock for resubmission, set redo flag
+  const updated = {...hw, submitted:false, redoRequested:true, redoRequestedAt: new Date().toLocaleDateString()};
+  const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
+  if(error){ showToast('Error: '+error.message); return; }
+  showToast('🔄 Redo requested — trainee will see a notice');
+  viewTrainee(uid, name, '');
 }
 
 async function saveInlineGrade(uid, ui, li){
@@ -2188,9 +2215,18 @@ async function loadHWContent(){
       </tbody></table>`:''}
     <p style="font-size:14px;color:var(--gray-600)">${saved.feedback}</p>
   </div>`:'';
+  const redoRequested = saved.redoRequested||false;
+  const redoNotice = redoRequested ? `<div class="card" style="border-left:4px solid var(--amber);margin-bottom:1rem">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:1.1rem">🔄</span>
+      <div class="card-title" style="color:var(--amber);margin-bottom:0">Redo requested</div>
+    </div>
+    <p style="font-size:13.5px;color:var(--gray-600)">Your supervisor has asked you to revise and resubmit this assignment. Your previous work is shown below — update it and resubmit when ready.</p>
+  </div>` : '';
   c.innerHTML=`<div class="hw-prompt"><div class="hw-prompt-label">Assignment</div><div class="hw-prompt-title">${hw.title}</div><div class="hw-prompt-body">${hw.prompt}</div></div>
+    ${redoNotice}
     ${feedbackHtml}
-    <div class="card"><div class="card-title">${submitted?'Your submission (submitted)':'Your submission'}</div>
+    <div class="card"><div class="card-title">${submitted?'Your submission (submitted)':redoRequested?'✏️ Revise and resubmit':'Your submission'}</div>
     <textarea id="hw-text" style="min-height:140px" ${submitted?'disabled':''} placeholder="Type or paste your homework here...">${saved.text||''}</textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
     ${submitted?`<span class="badge badge-teal" style="align-self:center">✓ Submitted</span>`:
