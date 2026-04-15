@@ -351,6 +351,26 @@ input:focus,select:focus{border-color:var(--coral)}
 .quiz-progress-bar{height:6px;background:var(--gray-100);border-radius:3px;margin-bottom:1.5rem;overflow:hidden}
 .quiz-progress-fill{height:6px;background:linear-gradient(90deg,var(--coral),#FF8C5A);border-radius:3px;transition:width 0.4s}
 
+
+/* ── FORUM ── */
+.forum-question{background:var(--white);border:1.5px solid var(--gray-100);border-radius:var(--radius-lg);margin-bottom:1.25rem;overflow:hidden}
+.forum-q-header{background:linear-gradient(135deg,var(--lavender),var(--peach));padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:10px}
+.forum-q-num{width:28px;height:28px;border-radius:50%;background:white;color:var(--purple);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.forum-q-text{font-size:14px;font-weight:600;color:var(--gray-800);line-height:1.5}
+.forum-posts{padding:0 1.25rem}
+.forum-post{padding:14px 0;border-bottom:1px solid var(--gray-100);display:flex;gap:10px}
+.forum-post:last-child{border-bottom:none}
+.forum-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;margin-top:2px}
+.forum-post-body{flex:1}
+.forum-post-name{font-size:12px;font-weight:600;color:var(--gray-800);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.forum-post-you{font-size:10px;background:var(--coral-light);color:var(--coral-dark);padding:1px 6px;border-radius:8px;font-weight:500}
+.forum-post-sup{font-size:10px;background:var(--purple-light);color:var(--purple);padding:1px 6px;border-radius:8px;font-weight:500}
+.forum-post-text{font-size:13.5px;color:var(--gray-700);line-height:1.6}
+.forum-post-time{font-size:11px;color:var(--gray-400);margin-top:3px}
+.forum-reply-box{padding:12px 1.25rem;background:var(--gray-50);border-top:1px solid var(--gray-100)}
+.forum-empty{padding:1.5rem 1.25rem;font-size:13px;color:var(--gray-400);text-align:center}
+.forum-post-count{font-size:11px;color:var(--gray-400);padding:8px 1.25rem;background:var(--gray-50);border-top:1px solid var(--gray-100)}
+
 </style>
 </head>
 <body>
@@ -555,12 +575,12 @@ create policy "Authenticated can write shared" on shared_data
       </div>
     </section>
 
-    <!-- DISCUSSION -->
+    <!-- DISCUSSION FORUM -->
     <section class="page" id="page-discussion">
-      <div class="page-header"><h1>Discussion questions</h1><p>Reflect and respond — your answers are saved automatically</p></div>
-      <div style="margin-bottom:1rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <div class="page-header"><h1>Discussion forum</h1><p>Share your thoughts and learn from your peers — everyone can read and reply</p></div>
+      <div style="margin-bottom:1.25rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <div><label class="form-label" style="display:inline;margin-right:6px">Unit:</label><select id="discussion-unit-select" onchange="loadDiscussionLessons()" style="width:auto"></select></div>
-        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="discussion-lesson-select" onchange="loadDiscussionQuestions()" style="width:auto"></select></div>
+        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="discussion-lesson-select" onchange="loadForumQuestions()" style="width:auto"></select></div>
       </div>
       <div id="discussion-questions"></div>
     </section>
@@ -1840,32 +1860,109 @@ function populateAllSelects(){
   ['discussion-unit-select','hw-unit-select'].forEach(id=>{const s=document.getElementById(id);if(s)s.innerHTML=opts;});
   loadDiscussionLessons();loadHWLessons();
 }
+// ── DISCUSSION FORUM ─────────────────────────────────────
+// Posts stored in shared_data as: forum_{ui}_{li}_{qi} = [{uid,name,text,ts,role}]
+const AVATAR_COLORS=['#D85A30','#534AB7','#0F6E56','#BA7517','#185FA5','#854F0B','#3B6D11'];
+function avatarColor(name){ let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length]; }
+
 function loadDiscussionLessons(){
   const ui=parseInt(document.getElementById('discussion-unit-select').value);
   const s=document.getElementById('discussion-lesson-select');
   s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');
-  loadDiscussionQuestions();
+  loadForumQuestions();
 }
-function loadDiscussionQuestions(){
+
+async function loadForumQuestions(){
   const ui=parseInt(document.getElementById('discussion-unit-select').value);
   const li=parseInt(document.getElementById('discussion-lesson-select').value);
-  if(!isUnlocked(ui,li)){document.getElementById('discussion-questions').innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked. Your supervisor will unlock it when it\'s time.</p></div>';return;}
+  const c=document.getElementById('discussion-questions');
+  if(!isUnlocked(ui,li)){c.innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked. Your supervisor will unlock it when it\'s time.</p></div>';return;}
+  c.innerHTML='<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:13px">Loading forum…</div>';
+
   const l=CURRICULUM[ui].lessons[li];
   const custom=getCC(ui,li);
   const wc=getWeekContent(ui,li);
   const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
-  const c=document.getElementById('discussion-questions');c.innerHTML='';
+
+  // Fetch all forum posts for this lesson from shared_data
+  const keys=qs.map((_,qi)=>`forum_${ui}_${li}_${qi}`);
+  const {data:rows}=await _sb.from('shared_data').select('key,value').in('key',keys);
+  const postMap={};(rows||[]).forEach(r=>{ postMap[r.key]=r.value||[]; });
+
+  c.innerHTML='';
   qs.forEach((q,qi)=>{
-    const saved=getDiscAns(ui,li,qi);
-    const div=document.createElement('div');div.className='discussion-q';
-    div.innerHTML=`<div class="dq-header"><div class="dq-num">${qi+1}</div><div class="dq-text">${q}</div></div>
-      <div class="dq-body"><textarea id="dq-${qi}" placeholder="Type your response here...">${saved}</textarea>
-      <div class="dq-actions"><span class="saved-indicator${saved?' show':''}" id="si-${qi}">${saved?'✓ Saved':''}</span>
-      <button class="btn btn-sm btn-primary" onclick="saveDiscQ(${ui},${li},${qi})">Save response</button></div></div>`;
+    const posts=postMap[`forum_${ui}_${li}_${qi}`]||[];
+    const div=document.createElement('div');
+    div.className='forum-question';
+    div.id=`forum-q-${qi}`;
+
+    const postsHtml=posts.length?posts.map(p=>{
+      const isMe=p.uid===currentUser?.id||p.uid===currentUser?.email;
+      const isSup=p.role==='supervisor';
+      const bg=isSup?'var(--purple)':avatarColor(p.name||'?');
+      const initials=(p.name||'?').split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2);
+      return `<div class="forum-post">
+        <div class="forum-avatar" style="background:${bg}">${initials}</div>
+        <div class="forum-post-body">
+          <div class="forum-post-name">${p.name||'Trainee'}
+            ${isMe?'<span class="forum-post-you">you</span>':''}
+            ${isSup?'<span class="forum-post-sup">supervisor</span>':''}
+          </div>
+          <div class="forum-post-text">${p.text}</div>
+          <div class="forum-post-time">${p.ts||''}</div>
+        </div>
+      </div>`;
+    }).join(''):'<div class="forum-empty">No responses yet — be the first! 💬</div>';
+
+    div.innerHTML=`<div class="forum-q-header">
+        <div class="forum-q-num">${qi+1}</div>
+        <div class="forum-q-text">${q}</div>
+      </div>
+      <div class="forum-posts" id="forum-posts-${qi}">${postsHtml}</div>
+      <div class="forum-post-count">${posts.length} response${posts.length!==1?'s':''}</div>
+      <div class="forum-reply-box">
+        <textarea id="forum-input-${qi}" placeholder="Share your thoughts…" style="min-height:70px;margin-bottom:8px"></textarea>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-sm btn-primary" onclick="postForumReply(${ui},${li},${qi})">Post reply 💬</button>
+        </div>
+      </div>`;
     c.appendChild(div);
   });
 }
-function saveDiscQ(ui,li,qi){const val=document.getElementById(`dq-${qi}`).value;saveDiscAns(ui,li,qi,val);const ind=document.getElementById(`si-${qi}`);ind.textContent='✓ Saved';ind.classList.add('show');showToast('Response saved!');}
+
+async function postForumReply(ui,li,qi){
+  const input=document.getElementById(`forum-input-${qi}`);
+  const text=input?.value?.trim();
+  if(!text){showToast('Please write something first!');return;}
+
+  const key=`forum_${ui}_${li}_${qi}`;
+  // Fetch current posts
+  const {data:row}=await _sb.from('shared_data').select('value').eq('key',key).single();
+  const posts=row?.value||[];
+
+  const newPost={
+    uid: currentUser.id||currentUser.email,
+    name: currentUser.name,
+    role: currentRole,
+    text,
+    ts: new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+  };
+  posts.push(newPost);
+
+  await _sb.from('shared_data').upsert({key,value:posts},{onConflict:'key'});
+  // Update cache
+  _cache.shared[key]=posts;
+  input.value='';
+  showToast('Reply posted! 💬');
+  // Re-render just this question's posts
+  loadForumQuestions();
+}
+
+// Keep old saveDiscQ for backward compat (review page still uses disc_ keys)
+function saveDiscQ(ui,li,qi){
+  const val=document.getElementById(`dq-${qi}`)?.value||'';
+  saveDiscAns(ui,li,qi,val);
+}
 
 // ── HOMEWORK ─────────────────────────────────────────────
 function loadHWLessons(){const ui=parseInt(document.getElementById('hw-unit-select').value);const s=document.getElementById('hw-lesson-select');s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');loadHWContent();}
@@ -1959,7 +2056,8 @@ async function loadReview(){
         c.appendChild(d);}
       const wc=getWeekContent(ui,li);const custom=getCC(ui,li);
       const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
-      qs.forEach((q,qi)=>{const ans=(udata[`disc_${ui}_${li}_${qi}`]||'');if(ans&&ans.trim()){found=true;const d=document.createElement('div');d.className='submission-card';d.innerHTML=`<div class="submission-header"><div><div class="submission-name">${traineeLabel} — Discussion: ${l.title} (Q${qi+1})</div><div class="submission-meta">Unit ${ui+1} · ${q.substring(0,70)}...</div></div><span class="badge badge-teal">Answered</span></div><div class="submission-body"><div class="submission-text">${ans}</div></div>`;c.appendChild(d);}});
+      // Discussion answers now live in the forum (shared_data), not user_data
+      // They are visible to all on the Discussion page
     });});
   });
   if(!found)c.innerHTML='<div class="empty-state"><p>No submissions yet.</p></div>';
@@ -1973,11 +2071,13 @@ async function saveFeedback(uid,ui,li){
   const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
   const updated={...hw,feedback:fb,overallGrade:overall,rubric:{...hw.rubric,...rubric}};
-  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
+  const {error:saveErr} = await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
   // Clear temp rubric store for this submission
   if(window._rubricTemp&&window._rubricTemp[rkey]) delete window._rubricTemp[rkey];
-  showToast('Feedback & grade saved! Trainee will see it on next login.');
-  loadReview();
+  if(saveErr){ showToast('Error saving: '+saveErr.message); return; }
+  showToast('✅ Feedback & grade saved!');
+  // Reload after short delay to let Supabase propagate
+  setTimeout(()=>loadReview(), 600);
 }
 
 function setRubricGrade(uid,ui,li,criterion,level,btn){
