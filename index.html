@@ -1937,7 +1937,7 @@ async function postForumReply(ui,li,qi){
 
   const key=`forum_${ui}_${li}_${qi}`;
   // Fetch current posts
-  const {data:row}=await _sb.from('shared_data').select('value').eq('key',key).single();
+  const {data:row}=await _sb.from('shared_data').select('value').eq('key',key).maybeSingle();
   const posts=row?.value||[];
 
   const newPost={
@@ -1973,7 +1973,7 @@ async function loadHWContent(){
   if(!isUnlocked(ui,li)){c.innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked.</p></div>';return;}
   // Always fetch fresh from Supabase so graded feedback shows immediately
   if(currentUser?.id){
-    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).single();
+    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).maybeSingle();
     if(fresh?.value) _cache.user[`hw_${ui}_${li}`]=fresh.value;
   }
   const l=CURRICULUM[ui].lessons[li];
@@ -2068,7 +2068,7 @@ async function saveFeedback(uid,ui,li){
   // Also merge in any rubric from temp store
   const rkey=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[rkey])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
   const updated={...hw,feedback:fb,overallGrade:overall,rubric:{...hw.rubric,...rubric}};
   const {error:saveErr} = await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
@@ -2098,7 +2098,7 @@ function setRubricGrade(uid,ui,li,criterion,level,btn){
 async function saveFeedbackRubric(uid,ui,li){
   const key=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[key])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
   await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,rubric:{...hw.rubric,...rubric}}},{onConflict:'user_id,key'});
 }
