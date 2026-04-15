@@ -223,6 +223,44 @@ input:focus,select:focus{border-color:var(--coral)}
 .loading-spinner{width:32px;height:32px;border:3px solid var(--gray-200);border-top-color:var(--coral);border-radius:50%;animation:spin 0.8s linear infinite}
 .loading-text{font-size:13px;color:var(--gray-400)}
 
+
+/* ── RUBRIC GRADING ── */
+.rubric-table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+.rubric-table th{font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;padding:8px 10px;text-align:left;border-bottom:2px solid var(--gray-100)}
+.rubric-table td{padding:10px;border-bottom:1px solid var(--gray-100);font-size:13px;vertical-align:middle}
+.rubric-table tr:last-child td{border-bottom:none}
+.rubric-criterion{font-weight:500;color:var(--gray-800)}
+.rubric-options{display:flex;gap:6px;flex-wrap:wrap}
+.rubric-option{padding:5px 12px;border-radius:16px;border:1.5px solid var(--gray-200);background:var(--white);font-size:12px;font-weight:500;color:var(--gray-400);cursor:pointer;transition:all 0.15s;font-family:var(--font-body)}
+.rubric-option:hover{border-color:var(--coral);color:var(--coral-dark)}
+.rubric-option.selected-developing{background:#FEF3C7;border-color:#D97706;color:#92400E}
+.rubric-option.selected-proficient{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
+.rubric-option.selected-exemplary{background:var(--teal-light);border-color:var(--teal);color:var(--teal)}
+.grade-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.grade-developing{background:#FEF3C7;color:#92400E}
+.grade-proficient{background:var(--blue-light);color:var(--blue)}
+.grade-exemplary{background:var(--teal-light);color:var(--teal)}
+.grade-pending{background:var(--gray-100);color:var(--gray-400)}
+/* ── QUIZ ── */
+.quiz-question{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem}
+.quiz-q-num{font-size:11px;font-weight:600;color:var(--coral);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.quiz-q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:12px;line-height:1.5}
+.quiz-options{display:flex;flex-direction:column;gap:8px}
+.quiz-option{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius);cursor:pointer;transition:all 0.15s;background:var(--white)}
+.quiz-option:hover{border-color:var(--coral-light);background:var(--coral-light)}
+.quiz-option.selected{border-color:var(--coral);background:var(--coral-light)}
+.quiz-option.correct{border-color:var(--teal);background:var(--teal-light)}
+.quiz-option.incorrect{border-color:#E53E3E;background:#FFF5F5}
+.quiz-option-letter{width:22px;height:22px;border-radius:50%;background:var(--gray-100);color:var(--gray-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.quiz-option.selected .quiz-option-letter{background:var(--coral);color:white}
+.quiz-option.correct .quiz-option-letter{background:var(--teal);color:white}
+.quiz-option.incorrect .quiz-option-letter{background:#E53E3E;color:white}
+.quiz-option-text{font-size:13.5px;color:var(--gray-800);line-height:1.4}
+.quiz-explanation{font-size:12.5px;color:var(--gray-600);margin-top:8px;padding:8px 12px;background:var(--gray-50);border-radius:var(--radius);line-height:1.5}
+.quiz-score-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);padding:2rem;text-align:center;margin-bottom:1.5rem}
+.quiz-score-big{font-size:3rem;font-weight:700;color:var(--coral);line-height:1}
+.quiz-score-label{font-size:13px;color:var(--gray-400);margin-top:4px}
+.quiz-generating{display:flex;align-items:center;gap:10px;padding:2rem;color:var(--gray-400);font-size:14px;justify-content:center}
 </style>
 </head>
 <body>
@@ -301,7 +339,7 @@ create policy "Authenticated can write shared" on shared_data
 
     <!-- SUPERVISOR -->
     <div id="auth-supervisor" style="display:none">
-      <div style="font-size:12px;margin-bottom:14px;text-align:left;background:var(--coral-light);padding:10px 12px;border-radius:var(--radius);color:var(--coral-dark)">Supervisor access gives you full control over content, access, and trainee submissions.<br><span style="opacity:0.75">Default password: <strong>supervisor123</strong></span></div>
+      <div style="font-size:12px;margin-bottom:14px;text-align:left;background:var(--coral-light);padding:10px 12px;border-radius:var(--radius);color:var(--coral-dark)">Supervisor access gives you full control over content, access, and trainee submissions.</div>
       <div class="login-field"><label>Supervisor password</label><input type="password" id="sp-pass" placeholder="Enter supervisor password" onkeydown="if(event.key==='Enter')signInSupervisor()"/></div>
       <div id="sp-error" class="error-msg"></div>
       <button class="login-btn" id="sp-btn" onclick="signInSupervisor()">Sign in as supervisor</button>
@@ -329,12 +367,14 @@ create policy "Authenticated can write shared" on shared_data
     <button class="nav-item" data-page="discussion" onclick="showPage('discussion',this)"><span class="nav-dot dot-teal"></span> Discussion</button>
     <button class="nav-item" data-page="homework" onclick="showPage('homework',this)"><span class="nav-dot dot-amber"></span> Homework</button>
     <button class="nav-item" data-page="resources" onclick="showPage('resources',this)"><span class="nav-dot dot-purple"></span> Resources</button>
+    <button class="nav-item" data-page="quiz" onclick="showPage('quiz',this)"><span class="nav-dot dot-blue"></span> Quizzes</button>
     <div class="nav-section-label sup-only" style="display:none">Supervisor</div>
     <button class="nav-item sup-only" style="display:none" data-page="review" onclick="showPage('review',this)"><span class="nav-dot dot-teal"></span> Review submissions</button>
     <button class="nav-item sup-only" style="display:none" data-page="manage" onclick="showPage('manage',this)"><span class="nav-dot dot-purple"></span> Manage content</button>
     <button class="nav-item sup-only" style="display:none" data-page="access" onclick="showPage('access',this)"><span class="nav-dot dot-coral"></span> Access controls</button>
     <button class="nav-item sup-only" style="display:none" data-page="manage-resources" onclick="showPage('manage-resources',this)"><span class="nav-dot dot-amber"></span> Manage resources</button>
     <button class="nav-item sup-only" style="display:none" data-page="trainees" onclick="showPage('trainees',this);loadTraineeList()"><span class="nav-dot dot-blue"></span> Trainees</button>
+    <button class="nav-item sup-only" style="display:none" data-page="quiz-results" onclick="showPage('quiz-results',this);loadQuizResults()"><span class="nav-dot dot-coral"></span> Quiz results</button>
   </nav>
 
   <main class="main-content">
@@ -461,6 +501,24 @@ create policy "Authenticated can write shared" on shared_data
         <div style="display:flex;justify-content:flex-end"><button class="btn btn-sm btn-primary" onclick="addResource()">Add resource</button></div>
       </div>
       <div id="resource-manage-list"></div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="page" id="page-quiz">
+      <div class="page-header"><h1>Quizzes</h1><p>Test your knowledge — quizzes are auto-generated from each lesson's content</p></div>
+      <div style="margin-bottom:1rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div><label class="form-label" style="display:inline;margin-right:6px">Unit:</label><select id="quiz-unit-select" onchange="loadQuizLessons()" style="width:auto"></select></div>
+        <div><label class="form-label" style="display:inline;margin-right:6px">Lesson:</label><select id="quiz-lesson-select" style="width:auto"></select></div>
+        <button class="btn btn-sm btn-primary" onclick="startQuiz()">Start quiz</button>
+        <button class="btn btn-sm" onclick="resetQuiz()">Reset</button>
+      </div>
+      <div id="quiz-content"></div>
+    </section>
+
+    <!-- QUIZ RESULTS (supervisor) -->
+    <section class="page" id="page-quiz-results">
+      <div class="page-header"><h1>Quiz results</h1><p>See how trainees are performing on each lesson quiz</p></div>
+      <div id="quiz-results-content"></div>
     </section>
 
     <!-- TRAINEES (supervisor) -->
@@ -1049,10 +1107,10 @@ async function signInSupervisor() {
   const { data: sd } = await _sb.from('shared_data').select('key,value');
   (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
   setAuthLoading('sp-btn', false, 'Sign in as supervisor');
-  const DEFAULT_SUP_PW = 'supervisor123';
+  const DEFAULT_SUP_PW = 'bx@n@lyst';
   const custom = sLoad('sup_password', null);
   const valid  = custom ? pw === custom : pw === DEFAULT_SUP_PW;
-  if (!valid) { err.textContent = 'Incorrect password. Default is: supervisor123'; return; }
+  if (!valid) { err.textContent = 'Incorrect password.'; return; }
   currentUser = { id: 'supervisor', email: 'supervisor', name: 'Supervisor' };
   currentRole = 'supervisor';
   // No user_data rows needed for supervisor
@@ -1231,10 +1289,10 @@ async function loadTraineeList() {
 }
 
 // ── INIT ─────────────────────────────────────────────────
-function initApp(){buildDashboard();buildCurriculumGrid();populateAllSelects();buildTraineeResources();if(currentRole==='supervisor'){buildAccessControls();buildManageResources();populateReviewSelect();loadReview();populateManageSelects();renderManageForm();}}
+function initApp(){buildDashboard();buildCurriculumGrid();populateAllSelects();populateQuizSelects();buildTraineeResources();if(currentRole==='supervisor'){buildAccessControls();buildManageResources();populateReviewSelect();loadReview();populateManageSelects();renderManageForm();}}
 
 // ── NAVIGATION ───────────────────────────────────────────
-function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');}
+function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='quiz'){const qc=document.getElementById('quiz-content');if(qc&&!qc.innerHTML.trim())qc.innerHTML='<div class="card"><p style="font-size:14px;color:var(--gray-400)">Select a unit and lesson above, then click "Start quiz".</p></div>';}}
 
 // ── DASHBOARD ────────────────────────────────────────────
 function buildDashboard(){
@@ -1421,8 +1479,22 @@ function loadHWContent(){
   const custom=getCC(ui,li);const wc=getWeekContent(ui,li);
   const hw=custom&&custom.homework?custom.homework:(wc&&wc.homework?wc.homework:defaultHomework(l.title,l.subtopics));
   const saved=getHW(ui,li);const submitted=saved.submitted;
+  const rubric=saved.rubric||{};
+  const overallGrade=saved.overallGrade||'';
+  const gradeBadge=overallGrade?`<span class="grade-badge grade-${overallGrade.toLowerCase()}">${overallGrade}</span>`:'<span class="grade-badge grade-pending">Awaiting grade</span>';
+  const feedbackHtml=saved.feedback?`<div class="card" style="border-left:4px solid var(--teal)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+      <div class="card-title" style="color:var(--teal);margin-bottom:0">Supervisor feedback</div>
+      ${gradeBadge}
+    </div>
+    ${rubric&&Object.keys(rubric).length?`<table class="rubric-table" style="margin-bottom:1rem">
+      <thead><tr><th>Criterion</th><th>Rating</th></tr></thead><tbody>
+      ${RUBRIC_CRITERIA.map(cr=>`<tr><td class="rubric-criterion">${cr}</td><td>${rubric[cr]?`<span class="grade-badge grade-${rubric[cr].toLowerCase()}" style="font-size:11px;padding:3px 10px">${rubric[cr]}</span>`:'—'}</td></tr>`).join('')}
+      </tbody></table>`:''}
+    <p style="font-size:14px;color:var(--gray-600)">${saved.feedback}</p>
+  </div>`:'';
   c.innerHTML=`<div class="hw-prompt"><div class="hw-prompt-label">Assignment</div><div class="hw-prompt-title">${hw.title}</div><div class="hw-prompt-body">${hw.prompt}</div></div>
-    ${saved.feedback?`<div class="card" style="border-left:4px solid var(--teal)"><div class="card-title" style="color:var(--teal)">Supervisor feedback</div><p style="font-size:14px;color:var(--gray-600)">${saved.feedback}</p></div>`:''}
+    ${feedbackHtml}
     <div class="card"><div class="card-title">${submitted?'Your submission (submitted)':'Your submission'}</div>
     <textarea id="hw-text" style="min-height:140px" ${submitted?'disabled':''} placeholder="Type or paste your homework here...">${saved.text||''}</textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
@@ -1458,7 +1530,28 @@ async function loadReview(){
     CURRICULUM.forEach((u,ui)=>{if(fu!==-1&&fu!==ui)return;u.lessons.forEach((l,li)=>{
       const hw=udata[`hw_${ui}_${li}`]||{text:'',submitted:false,feedback:''};
       if(hw.submitted){found=true;const d=document.createElement('div');d.className='submission-card';
-        d.innerHTML=`<div class="submission-header"><div><div class="submission-name">${traineeLabel} — ${l.title}</div><div class="submission-meta">Unit ${ui+1} · Submitted ${hw.submittedAt||'recently'}</div></div><span class="badge ${hw.feedback?'badge-teal':'badge-amber'}">${hw.feedback?'Reviewed':'Needs review'}</span></div><div class="submission-body"><div class="submission-text">${hw.text}</div><div><div class="form-label" style="margin-bottom:5px">Feedback for trainee</div><textarea id="fb-${uid}-${ui}-${li}" style="min-height:70px" placeholder="Leave written feedback here...">${hw.feedback||''}</textarea><div class="submission-actions" style="margin-top:8px"><button class="btn btn-sm btn-primary" onclick="saveFeedback('${uid}',${ui},${li})">Save feedback</button></div></div></div>`;
+        const rubric=hw.rubric||{};const overallGrade=hw.overallGrade||'';
+        const rubricInputs=RUBRIC_CRITERIA.map(cr=>`<tr>
+          <td class="rubric-criterion" style="padding:8px 10px;font-size:13px">${cr}</td>
+          <td style="padding:8px 10px"><div class="rubric-options">
+            ${['Developing','Proficient','Exemplary'].map(lvl=>`<button class="rubric-option${rubric[cr]===lvl?' selected-'+lvl.toLowerCase():''}" onclick="setRubricGrade('${uid}',${ui},${li},'${cr}','${lvl}',this)">${lvl}</button>`).join('')}
+          </div></td></tr>`).join('');
+        const overallSelect=`<select id="overall-${uid}-${ui}-${li}" style="font-family:var(--font-body);font-size:13px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius)">
+          <option value="">Overall grade...</option>
+          <option${overallGrade==='Developing'?' selected':''}>Developing</option>
+          <option${overallGrade==='Proficient'?' selected':''}>Proficient</option>
+          <option${overallGrade==='Exemplary'?' selected':''}>Exemplary</option>
+        </select>`;
+        d.innerHTML=`<div class="submission-header"><div><div class="submission-name">${traineeLabel} — ${l.title}</div><div class="submission-meta">Unit ${ui+1} · Submitted ${hw.submittedAt||'recently'}</div></div><span class="badge ${hw.feedback?'badge-teal':'badge-amber'}">${hw.feedback?'Reviewed':'Needs review'}</span></div>
+        <div class="submission-body">
+          <div class="submission-text">${hw.text}</div>
+          <div class="card-title" style="margin-bottom:8px">Rubric</div>
+          <table class="rubric-table" style="margin-bottom:1rem"><thead><tr><th>Criterion</th><th>Rating</th></tr></thead><tbody>${rubricInputs}</tbody></table>
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">${overallSelect}</div>
+          <div class="form-label" style="margin-bottom:5px">Written feedback</div>
+          <textarea id="fb-${uid}-${ui}-${li}" style="min-height:70px" placeholder="Leave written feedback here...">${hw.feedback||''}</textarea>
+          <div class="submission-actions" style="margin-top:8px"><button class="btn btn-sm btn-primary" onclick="saveFeedback('${uid}',${ui},${li})">Save feedback &amp; grade</button></div>
+        </div>`;
         c.appendChild(d);}
       const wc=getWeekContent(ui,li);const custom=getCC(ui,li);
       const qs=custom&&custom.questions?custom.questions:(wc&&wc.questions?wc.questions:defaultDiscussion(l.title,l.subtopics));
@@ -1469,11 +1562,34 @@ async function loadReview(){
 }
 async function saveFeedback(uid,ui,li){
   const fb=document.getElementById(`fb-${uid}-${ui}-${li}`).value;
-  // Load the specific hw row for this user directly
+  const overall=document.getElementById(`overall-${uid}-${ui}-${li}`)?.value||'';
   const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
-  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb}},{onConflict:'user_id,key'});
-  showToast('Feedback saved!');loadReview();
+  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb,overallGrade:overall}},{onConflict:'user_id,key'});
+  showToast('Feedback & grade saved!');loadReview();
+}
+
+function setRubricGrade(uid,ui,li,criterion,level,btn){
+  // Update button styles in this row
+  btn.closest('.rubric-options').querySelectorAll('.rubric-option').forEach(b=>{
+    b.className='rubric-option';
+  });
+  btn.className=`rubric-option selected-${level.toLowerCase()}`;
+  // Save to a temp store keyed by uid+ui+li
+  const key=`${uid}_${ui}_${li}`;
+  if(!window._rubricTemp) window._rubricTemp={};
+  if(!window._rubricTemp[key]) window._rubricTemp[key]={};
+  window._rubricTemp[key][criterion]=level;
+  // Persist rubric immediately
+  saveFeedbackRubric(uid,ui,li);
+}
+
+async function saveFeedbackRubric(uid,ui,li){
+  const key=`${uid}_${ui}_${li}`;
+  const rubric=(window._rubricTemp&&window._rubricTemp[key])||{};
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
+  const hw=data?.value||{text:'',submitted:false,feedback:''};
+  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,rubric:{...hw.rubric,...rubric}}},{onConflict:'user_id,key'});
 }
 
 // ── MANAGE CONTENT ───────────────────────────────────────
@@ -1498,6 +1614,245 @@ function saveManageForm(ui,li){
   const questions=qRaw.split('\n').map(q=>q.trim()).filter(Boolean);
   saveCC(ui,li,{slides,questions:questions.length?questions:null,homework:hwTitle||hwPrompt?{title:hwTitle,prompt:hwPrompt}:null});
   showToast('Content saved!');
+}
+
+
+// ── RUBRIC CRITERIA ──────────────────────────────────────
+const RUBRIC_CRITERIA = [
+  'Clinical Reasoning',
+  'Application to Practice',
+  'Understanding of Concepts',
+  'Quality of Writing',
+  'Self-Reflection'
+];
+
+// ── QUIZ ─────────────────────────────────────────────────
+let _quizQuestions = [];
+let _quizAnswers   = {};
+let _quizSubmitted = false;
+
+function loadQuizLessons(){
+  const ui=parseInt(document.getElementById('quiz-unit-select').value);
+  const s=document.getElementById('quiz-lesson-select');
+  s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');
+}
+
+function populateQuizSelects(){
+  const opts=CURRICULUM.map((u,i)=>`<option value="${i}">Unit ${i+1}: ${u.unit}</option>`).join('');
+  const s=document.getElementById('quiz-unit-select');
+  if(s){ s.innerHTML=opts; loadQuizLessons(); }
+}
+
+async function startQuiz(){
+  const ui=parseInt(document.getElementById('quiz-unit-select').value);
+  const li=parseInt(document.getElementById('quiz-lesson-select').value);
+  if(!isUnlocked(ui,li)){showToast('This lesson is locked.');return;}
+  const l=CURRICULUM[ui].lessons[li];
+
+  // Check if we have saved quiz for this lesson
+  const saved=uLoad(`quiz_${ui}_${li}`,null);
+  if(saved&&saved.questions){
+    _quizQuestions=saved.questions;
+    _quizAnswers=saved.answers||{};
+    _quizSubmitted=saved.submitted||false;
+    renderQuiz(ui,li);
+    return;
+  }
+
+  // Generate quiz via Anthropic API
+  const c=document.getElementById('quiz-content');
+  c.innerHTML=`<div class="quiz-generating"><span class="auth-loading" style="border-color:rgba(0,0,0,0.15);border-top-color:var(--coral);width:18px;height:18px"></span> Generating quiz for "${l.title}"…</div>`;
+
+  const subtopics=l.subtopics.join(', ');
+  const prompt=`You are an expert BCBA supervisor. Generate exactly 5 multiple-choice quiz questions to test a BCBA trainee's understanding of the lesson "${l.title}".
+
+The lesson covers these subtopics: ${subtopics}.
+
+Rules:
+- Each question must have exactly 4 options (A, B, C, D)
+- Only one correct answer per question
+- Questions should test applied clinical understanding, not just memorization
+- Include a brief explanation for the correct answer
+
+Respond ONLY with valid JSON in this exact format, no other text:
+{
+  "questions": [
+    {
+      "question": "Question text here?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct": 0,
+      "explanation": "Brief explanation of why this is correct."
+    }
+  ]
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.find(b=>b.type==='text')?.text||'';
+    const clean=text.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    _quizQuestions=parsed.questions;
+    _quizAnswers={};
+    _quizSubmitted=false;
+    uSave(`quiz_${ui}_${li}`,{questions:_quizQuestions,answers:{},submitted:false});
+    renderQuiz(ui,li);
+  } catch(e){
+    c.innerHTML=`<div class="card"><p style="color:#c0392b;font-size:14px">Could not generate quiz. Please try again.</p></div>`;
+    console.error(e);
+  }
+}
+
+function renderQuiz(ui,li){
+  const c=document.getElementById('quiz-content');
+  if(!_quizQuestions.length){c.innerHTML='<div class="card"><p>No quiz available.</p></div>';return;}
+
+  if(_quizSubmitted){
+    // Show results
+    const correct=_quizQuestions.filter((q,i)=>_quizAnswers[i]===q.correct).length;
+    const pct=Math.round(correct/_quizQuestions.length*100);
+    let scoreColor=pct>=80?'var(--teal)':pct>=60?'var(--blue)':'var(--coral)';
+    let html=`<div class="quiz-score-card">
+      <div class="quiz-score-big" style="color:${scoreColor}">${pct}%</div>
+      <div class="quiz-score-label">${correct} of ${_quizQuestions.length} correct</div>
+      <div style="margin-top:1rem"><button class="btn btn-sm" onclick="resetQuiz()">Retake quiz</button></div>
+    </div>`;
+    _quizQuestions.forEach((q,i)=>{
+      const chosen=_quizAnswers[i];
+      const isCorrect=chosen===q.correct;
+      html+=`<div class="quiz-question">
+        <div class="quiz-q-num">Question ${i+1}</div>
+        <div class="quiz-q-text">${q.question}</div>
+        <div class="quiz-options">
+          ${q.options.map((opt,oi)=>{
+            let cls='quiz-option';
+            if(oi===q.correct) cls+=' correct';
+            else if(oi===chosen&&!isCorrect) cls+=' incorrect';
+            return `<div class="${cls}"><span class="quiz-option-letter">${'ABCD'[oi]}</span><span class="quiz-option-text">${opt}</span></div>`;
+          }).join('')}
+        </div>
+        <div class="quiz-explanation">💡 ${q.explanation}</div>
+      </div>`;
+    });
+    c.innerHTML=html;
+    return;
+  }
+
+  // Show answerable quiz
+  let html='';
+  _quizQuestions.forEach((q,i)=>{
+    html+=`<div class="quiz-question">
+      <div class="quiz-q-num">Question ${i+1} of ${_quizQuestions.length}</div>
+      <div class="quiz-q-text">${q.question}</div>
+      <div class="quiz-options" id="qopts-${i}">
+        ${q.options.map((opt,oi)=>`<div class="quiz-option${_quizAnswers[i]===oi?' selected':''}" onclick="selectQuizAnswer(${i},${oi})">
+          <span class="quiz-option-letter">${'ABCD'[oi]}</span>
+          <span class="quiz-option-text">${opt}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  const answered=Object.keys(_quizAnswers).length;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem">
+    <span style="font-size:13px;color:var(--gray-400)">${answered} of ${_quizQuestions.length} answered</span>
+    <button class="btn btn-primary" onclick="submitQuiz(${ui},${li})" ${answered<_quizQuestions.length?'disabled':''}>Submit quiz</button>
+  </div>`;
+  c.innerHTML=html;
+}
+
+function selectQuizAnswer(qi,oi){
+  if(_quizSubmitted) return;
+  _quizAnswers[qi]=oi;
+  document.querySelectorAll(`#qopts-${qi} .quiz-option`).forEach((el,i)=>{
+    el.classList.toggle('selected',i===oi);
+  });
+  // Enable submit if all answered
+  const answered=Object.keys(_quizAnswers).length;
+  const submitBtn=document.querySelector('#quiz-content .btn-primary');
+  if(submitBtn) submitBtn.disabled=answered<_quizQuestions.length;
+}
+
+async function submitQuiz(ui,li){
+  _quizSubmitted=true;
+  uSave(`quiz_${ui}_${li}`,{questions:_quizQuestions,answers:_quizAnswers,submitted:true});
+  // Also save result summary for supervisor view
+  const correct=_quizQuestions.filter((q,i)=>_quizAnswers[i]===q.correct).length;
+  const pct=Math.round(correct/_quizQuestions.length*100);
+  const lesson=CURRICULUM[ui].lessons[li];
+  uSave(`quizresult_${ui}_${li}`,{
+    score:pct,correct,total:_quizQuestions.length,
+    lessonTitle:lesson.title,unitTitle:CURRICULUM[ui].unit,
+    submittedAt:new Date().toLocaleDateString(),
+    userName:currentUser.name
+  });
+  renderQuiz(ui,li);
+}
+
+function resetQuiz(){
+  const ui=parseInt(document.getElementById('quiz-unit-select').value);
+  const li=parseInt(document.getElementById('quiz-lesson-select').value);
+  _quizQuestions=[];_quizAnswers={};_quizSubmitted=false;
+  uSave(`quiz_${ui}_${li}`,null);
+  document.getElementById('quiz-content').innerHTML='<div class="card"><p style="font-size:14px;color:var(--gray-400)">Select a lesson above and click "Start quiz" to begin.</p></div>';
+}
+
+// ── QUIZ RESULTS (supervisor) ─────────────────────────────
+async function loadQuizResults(){
+  const c=document.getElementById('quiz-results-content');if(!c)return;
+  c.innerHTML='<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading…</div>';
+  const { data: allRows } = await _sb.from('user_data').select('user_id,key,value');
+  if(!allRows||!allRows.length){c.innerHTML='<div class="empty-state"><p>No quiz results yet.</p></div>';return;}
+
+  // Collect all quizresult_ rows
+  const results=allRows.filter(r=>r.key.startsWith('quizresult_'));
+  const profiles={};
+  allRows.filter(r=>r.key==='profile').forEach(r=>{ profiles[r.user_id]=r.value; });
+
+  if(!results.length){c.innerHTML='<div class="empty-state"><p>No quiz results yet.</p></div>';return;}
+
+  // Group by lesson
+  const byLesson={};
+  results.forEach(r=>{
+    const lkey=r.key.replace('quizresult_','');
+    if(!byLesson[lkey]) byLesson[lkey]=[];
+    const profile=profiles[r.user_id]||{};
+    byLesson[lkey].push({...r.value,name:profile.name||r.value.userName||'Trainee'});
+  });
+
+  let html='';
+  Object.entries(byLesson).forEach(([lkey,rows])=>{
+    const avg=Math.round(rows.reduce((s,r)=>s+r.score,0)/rows.length);
+    const first=rows[0];
+    html+=`<div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">${first.lessonTitle||lkey}</div>
+          <div style="font-size:12px;color:var(--gray-400)">${first.unitTitle||''} · ${rows.length} attempt${rows.length>1?'s':''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:700;color:${avg>=80?'var(--teal)':avg>=60?'var(--blue)':'var(--coral)'}">${avg}%</div>
+          <div style="font-size:11px;color:var(--gray-400)">avg score</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="font-size:11px;color:var(--gray-400);text-align:left;padding:6px 8px;border-bottom:1px solid var(--gray-100)">Trainee</th><th style="font-size:11px;color:var(--gray-400);text-align:left;padding:6px 8px;border-bottom:1px solid var(--gray-100)">Score</th><th style="font-size:11px;color:var(--gray-400);text-align:left;padding:6px 8px;border-bottom:1px solid var(--gray-100)">Date</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td style="padding:8px;font-size:13px;color:var(--gray-800)">${r.name}</td>
+          <td style="padding:8px"><span style="font-weight:600;color:${r.score>=80?'var(--teal)':r.score>=60?'var(--blue)':'var(--coral)'}">${r.score}%</span> <span style="font-size:12px;color:var(--gray-400)">(${r.correct}/${r.total})</span></td>
+          <td style="padding:8px;font-size:12px;color:var(--gray-400)">${r.submittedAt||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  });
+  c.innerHTML=html;
 }
 
 // ── UTILS ────────────────────────────────────────────────
