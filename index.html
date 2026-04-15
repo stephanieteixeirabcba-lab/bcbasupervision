@@ -662,8 +662,16 @@ create policy "Authenticated can write shared" on shared_data
 
     <!-- TRAINEES (supervisor) -->
     <section class="page" id="page-trainees">
-      <div class="page-header"><h1>Trainees</h1><p>All accounts that have signed up to your supervision platform</p></div>
-      <div class="card"><div class="card-title">Registered trainees</div><div id="trainee-list-content"><div style="font-size:13px;color:var(--gray-400)">Loading…</div></div></div>
+      <div id="trainees-list-view">
+        <div class="page-header"><h1>Trainees</h1><p>Click a trainee to see all their work, grades, and progress</p></div>
+        <div class="card"><div id="trainee-list-content"><div style="font-size:13px;color:var(--gray-400)">Loading…</div></div></div>
+      </div>
+      <div id="trainee-detail-view" style="display:none">
+        <div class="lesson-nav-bar" style="margin-bottom:1.25rem">
+          <button class="btn btn-sm" onclick="showTraineeList()">← Back to trainees</button>
+        </div>
+        <div id="trainee-detail-content"></div>
+      </div>
     </section>
   </main>
 </div>
@@ -1513,35 +1521,136 @@ function buildTraineeResources() {
 async function loadTraineeList() {
   const c = document.getElementById('trainee-list-content'); if (!c) return;
   c.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:1rem">Loading…</div>';
-
-  // Fetch all profile rows from user_data
   const { data, error } = await _sb.from('user_data').select('user_id,value').eq('key','profile');
-
   if (error) {
-    c.innerHTML = `<div class="empty-state"><p style="color:#c0392b">Error loading trainees: ${error.message}</p><p style="font-size:12px;color:var(--gray-400);margin-top:6px">Make sure the "Supervisor can read all user data" RLS policy is added in Supabase.</p></div>`;
+    c.innerHTML = `<div class="empty-state"><p style="color:#c0392b">Error: ${error.message}</p><p style="font-size:12px;color:var(--gray-400);margin-top:6px">Make sure the read-all RLS policy is added in Supabase SQL editor.</p></div>`;
     return;
   }
-
   if (!data || !data.length) {
-    c.innerHTML = '<div class="empty-state"><p>No trainees found yet.</p><p style="font-size:12px;color:var(--gray-400);margin-top:6px">Trainees will appear here after they sign in at least once.</p></div>';
+    c.innerHTML = '<div class="empty-state"><p>No trainees yet.</p><p style="font-size:12px;color:var(--gray-400);margin-top:6px">Trainees appear here after signing in at least once.</p></div>';
     return;
   }
-
   c.innerHTML = data.map(row => {
     const t = row.value || {};
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray-100)">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:34px;height:34px;border-radius:50%;background:var(--coral-light);color:var(--coral-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">
-          ${(t.name||'?').charAt(0).toUpperCase()}
-        </div>
+    const initials = (t.name||'?').split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2);
+    return `<div onclick="viewTrainee('${row.user_id}','${(t.name||'Unknown').replace(/'/g,"\'")}','${(t.email||'').replace(/'/g,"\'")}','${t.email||''}')"
+      style="display:flex;align-items:center;justify-content:space-between;padding:14px 12px;border-radius:var(--radius-lg);cursor:pointer;transition:background 0.15s;margin-bottom:4px"
+      onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--coral-light);color:var(--coral-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">${initials}</div>
         <div>
-          <div style="font-size:13.5px;font-weight:500;color:var(--gray-800)">${t.name || 'Unknown'}</div>
-          <div style="font-size:12px;color:var(--gray-400)">${t.email || ''}</div>
+          <div style="font-size:13.5px;font-weight:600;color:var(--gray-800)">${t.name||'Unknown'}</div>
+          <div style="font-size:12px;color:var(--gray-400)">${t.email||''}</div>
         </div>
       </div>
-      <span class="badge badge-teal">Active</span>
+      <span style="font-size:13px;color:var(--coral)">View work →</span>
     </div>`;
   }).join('');
+}
+
+function showTraineeList(){
+  document.getElementById('trainees-list-view').style.display='';
+  document.getElementById('trainee-detail-view').style.display='none';
+}
+
+async function viewTrainee(uid, name, email){
+  document.getElementById('trainees-list-view').style.display='none';
+  document.getElementById('trainee-detail-view').style.display='';
+  const c=document.getElementById('trainee-detail-content');
+  const initials=name.split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2);
+  c.innerHTML=`<div style="font-size:13px;color:var(--gray-400);padding:2rem;text-align:center">Loading ${name}'s work…</div>`;
+
+  // Fetch all data for this trainee
+  const {data:rows,error}=await _sb.from('user_data').select('key,value').eq('user_id',uid);
+  if(error||!rows){c.innerHTML=`<div class="card"><p style="color:#c0392b">Could not load data: ${error?.message}</p></div>`;return;}
+
+  const udata={};rows.forEach(r=>{ udata[r.key]=r.value; });
+
+  // Build profile header
+  let html=`<div class="welcome-banner" style="margin-bottom:1.5rem">
+    <div>
+      <h2 style="font-size:1.3rem">${name}</h2>
+      <p>${email}</p>
+    </div>
+    <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.3);color:white;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700">${initials}</div>
+  </div>`;
+
+  // Stats row
+  let hwSubmitted=0,hwGraded=0,quizzesTaken=0,totalScore=0;
+  CURRICULUM.forEach((u,ui)=>{
+    u.lessons.forEach((_,li)=>{
+      const hw=udata[`hw_${ui}_${li}`]||{};
+      if(hw.submitted) hwSubmitted++;
+      if(hw.submitted&&hw.feedback) hwGraded++;
+      const qr=udata[`quizresult_${ui}_${li}`];
+      if(qr){quizzesTaken++;totalScore+=qr.score||0;}
+    });
+  });
+  const avgQuiz=quizzesTaken?Math.round(totalScore/quizzesTaken):0;
+  html+=`<div class="stat-grid" style="margin-bottom:1.5rem">
+    <div class="stat-card-v2"><div class="stat-icon stat-icon-amber">📝</div><div><div class="stat-val">${hwSubmitted}</div><div class="stat-lbl">HW submitted</div></div></div>
+    <div class="stat-card-v2"><div class="stat-icon stat-icon-teal">✅</div><div><div class="stat-val">${hwGraded}</div><div class="stat-lbl">HW graded</div></div></div>
+    <div class="stat-card-v2"><div class="stat-icon stat-icon-purple">🧠</div><div><div class="stat-val">${avgQuiz}%</div><div class="stat-lbl">Avg quiz score</div></div></div>
+  </div>`;
+
+  // Homework submissions per unit
+  CURRICULUM.forEach((u,ui)=>{
+    const unitHw=u.lessons.map((l,li)=>{
+      const hw=udata[`hw_${ui}_${li}`]||{};
+      if(!hw.submitted) return null;
+      const grade=hw.overallGrade||'';
+      const gradeBadge=grade?`<span class="grade-badge grade-${grade.toLowerCase()}" style="font-size:11px;padding:3px 10px">${grade}</span>`:'<span style="font-size:11px;color:var(--gray-400)">Not graded</span>';
+      const rubric=hw.rubric||{};
+      const rubricHtml=Object.keys(rubric).length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${Object.entries(rubric).map(([cr,lvl])=>`<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--gray-100);color:var(--gray-600)">${cr}: <strong>${lvl}</strong></span>`).join('')}</div>`:'';
+      return `<div style="padding:14px 0;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:13.5px;font-weight:600;color:var(--gray-800)">${l.title}</div>
+          ${gradeBadge}
+        </div>
+        <div style="font-size:13px;color:var(--gray-600);background:var(--gray-50);padding:10px 12px;border-radius:var(--radius);line-height:1.6;max-height:100px;overflow-y:auto">${hw.text||''}</div>
+        ${rubricHtml}
+        ${hw.feedback?`<div style="margin-top:8px;padding:8px 12px;background:var(--teal-light);border-radius:var(--radius);font-size:13px;color:var(--teal)"><strong>Your feedback:</strong> ${hw.feedback}</div>`:''}
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-sm btn-primary" onclick="openGradeModal('${uid}',${ui},${li})">Grade / edit feedback</button>
+        </div>
+      </div>`;
+    }).filter(Boolean);
+
+    if(unitHw.length){
+      html+=`<div class="card" style="margin-bottom:1rem">
+        <div class="card-title">Unit ${ui+1}: ${u.unit}</div>
+        ${unitHw.join('')}
+      </div>`;
+    }
+  });
+
+  // Quiz results
+  const quizRows=Object.entries(udata).filter(([k])=>k.startsWith('quizresult_'));
+  if(quizRows.length){
+    html+=`<div class="card" style="margin-bottom:1rem"><div class="card-title">🧠 Quiz results</div>`;
+    quizRows.forEach(([k,v])=>{
+      const score=v?.score||0;
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+        <div><div style="font-size:13px;font-weight:500;color:var(--gray-800)">${v?.lessonTitle||k}</div><div style="font-size:11px;color:var(--gray-400)">${v?.submittedAt||''}</div></div>
+        <span style="font-size:18px;font-weight:700;color:${score>=80?'var(--teal)':score>=60?'var(--blue)':'var(--coral)'}">${score}%</span>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  if(!hwSubmitted&&!quizRows.length){
+    html+=`<div class="card"><p style="color:var(--gray-400);font-size:14px;text-align:center;padding:1rem">No submissions yet from ${name}.</p></div>`;
+  }
+
+  c.innerHTML=html;
+}
+
+// Quick grade modal opened from trainee detail view
+function openGradeModal(uid,ui,li){
+  // Navigate to review page filtered for this submission
+  showPage('review', document.querySelector('[data-page="review"]'));
+  const sel=document.getElementById('review-unit-select');
+  if(sel){sel.value=ui;loadReview();}
 }
 
 // ── INIT ─────────────────────────────────────────────────
@@ -1760,11 +1869,16 @@ function saveDiscQ(ui,li,qi){const val=document.getElementById(`dq-${qi}`).value
 
 // ── HOMEWORK ─────────────────────────────────────────────
 function loadHWLessons(){const ui=parseInt(document.getElementById('hw-unit-select').value);const s=document.getElementById('hw-lesson-select');s.innerHTML=CURRICULUM[ui].lessons.map((l,i)=>`<option value="${i}">Lesson ${i+1}: ${l.title}</option>`).join('');loadHWContent();}
-function loadHWContent(){
+async function loadHWContent(){
   const ui=parseInt(document.getElementById('hw-unit-select').value);
   const li=parseInt(document.getElementById('hw-lesson-select').value);
   const c=document.getElementById('hw-content');
   if(!isUnlocked(ui,li)){c.innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked.</p></div>';return;}
+  // Always fetch fresh from Supabase so graded feedback shows immediately
+  if(currentUser?.id){
+    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).single();
+    if(fresh?.value) _cache.user[`hw_${ui}_${li}`]=fresh.value;
+  }
   const l=CURRICULUM[ui].lessons[li];
   const custom=getCC(ui,li);const wc=getWeekContent(ui,li);
   const hw=custom&&custom.homework?custom.homework:(wc&&wc.homework?wc.homework:defaultHomework(l.title,l.subtopics));
@@ -1853,10 +1967,17 @@ async function loadReview(){
 async function saveFeedback(uid,ui,li){
   const fb=document.getElementById(`fb-${uid}-${ui}-${li}`).value;
   const overall=document.getElementById(`overall-${uid}-${ui}-${li}`)?.value||'';
+  // Also merge in any rubric from temp store
+  const rkey=`${uid}_${ui}_${li}`;
+  const rubric=(window._rubricTemp&&window._rubricTemp[rkey])||{};
   const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).single();
   const hw=data?.value||{text:'',submitted:false,feedback:''};
-  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,feedback:fb,overallGrade:overall}},{onConflict:'user_id,key'});
-  showToast('Feedback & grade saved!');loadReview();
+  const updated={...hw,feedback:fb,overallGrade:overall,rubric:{...hw.rubric,...rubric}};
+  await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
+  // Clear temp rubric store for this submission
+  if(window._rubricTemp&&window._rubricTemp[rkey]) delete window._rubricTemp[rkey];
+  showToast('Feedback & grade saved! Trainee will see it on next login.');
+  loadReview();
 }
 
 function setRubricGrade(uid,ui,li,criterion,level,btn){
