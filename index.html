@@ -600,13 +600,27 @@ create policy "Authenticated can write shared" on shared_data
 
     <!-- ACCESS CONTROLS -->
     <section class="page" id="page-access">
-      <div class="page-header"><h1>Access controls</h1><p>Lock or unlock units and individual lessons — locked lessons appear grayed out for trainees</p></div>
+      <div class="page-header"><h1>Access controls</h1><p>Set access per trainee — each person can have their own unlocked units and lessons</p></div>
+
+      <!-- Trainee selector -->
       <div class="card" style="margin-bottom:1rem">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div><div class="card-title" style="margin-bottom:2px">Quick actions</div><div style="font-size:12px;color:var(--gray-400)">Apply to every lesson at once</div></div>
-          <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="setAllAccess(false)">Lock all</button><button class="btn btn-sm btn-primary" onclick="setAllAccess(true)">Unlock all</button></div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div class="card-title" style="margin-bottom:6px">Select trainee</div>
+            <select id="access-trainee-select" onchange="loadAccessForTrainee()" style="width:100%">
+              <option value="__global__">🌐 Default (applies to all trainees)</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-self:flex-end">
+            <button class="btn btn-sm btn-primary" onclick="setAllAccessFor(true)">Unlock all</button>
+            <button class="btn btn-sm" onclick="setAllAccessFor(false)">Lock all</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)">
+          <strong>Default</strong> applies to everyone without individual settings. Individual trainee settings override the default.
         </div>
       </div>
+
       <div id="access-controls-list"></div>
     </section>
 
@@ -1163,8 +1177,17 @@ const getHW         = (u,l) => uLoad(`hw_${u}_${l}`, {text:'',submitted:false,fe
 const saveHW        = (u,l,d) => uSave(`hw_${u}_${l}`, d);
 const getCC         = (u,l) => sLoad(`cc_${u}_${l}`, null);
 const saveCC        = (u,l,d) => sSave(`cc_${u}_${l}`, d);
-const getLocks      = () => sLoad('locks', {});
-const saveLocks     = (s) => sSave('locks', s);
+// Per-trainee locks: shared_data key 'locks__{userId}' or 'locks' for global default
+function getLocksFor(uid) {
+  if (!uid || uid === '__global__') return sLoad('locks', {});
+  return sLoad(`locks__${uid}`, null); // null = use global
+}
+function saveLocksFor(uid, s) {
+  if (!uid || uid === '__global__') return sSave('locks', s);
+  sSave(`locks__${uid}`, s);
+}
+const getLocks  = () => sLoad('locks', {});
+const saveLocks = (s) => sSave('locks', s);
 const getResources  = () => sLoad('resources', DEFAULT_RESOURCES);
 const saveResources = (r) => sSave('resources', r);
 
@@ -1315,50 +1338,125 @@ async function logout() {
 
 // ── ACCESS CONTROLS ──────────────────────────────────────
 function isUnlocked(ui, li) {
+  // Check per-user locks first (stored in user's own user_data)
+  const personal = uLoad('my_locks', null);
+  if (personal !== null) {
+    if (!personal || Object.keys(personal).length === 0) return true;
+    if (personal[ui] === undefined) return true;
+    if (personal[ui][li] === undefined) return true;
+    return personal[ui][li];
+  }
+  // Fall back to global default
   const s = getLocks();
   if (!s || Object.keys(s).length === 0) return true;
   if (s[ui] === undefined) return true;
   if (s[ui][li] === undefined) return true;
   return s[ui][li];
 }
+// Current trainee being edited in the access panel
+let _accessUid = '__global__';
+
+function getAccessLocks() {
+  if (_accessUid === '__global__') return getLocks();
+  // Load from shared_data where supervisor saved per-user locks
+  return sLoad(`locks__${_accessUid}`, null) ?? getLocks();
+}
+function saveAccessLocks(s) {
+  if (_accessUid === '__global__') {
+    saveLocks(s);
+  } else {
+    saveLocksFor(_accessUid, s);
+    // Also push to the trainee's user_data so isUnlocked() picks it up
+    _sb.from('user_data').upsert({user_id: _accessUid, key: 'my_locks', value: s}, {onConflict:'user_id,key'});
+    // Update cache if this is the current user
+    if (currentUser && currentUser.id === _accessUid) _cache.user['my_locks'] = s;
+  }
+}
+
 function toggleLessonLock(ui, li, val) {
-  const s = getLocks();
+  const s = getAccessLocks();
   if (!s[ui]) s[ui] = {};
   s[ui][li] = val;
-  saveLocks(s);
+  saveAccessLocks(s);
   buildDashboard();
   const lbl = document.getElementById(`lbl-${ui}-${li}`);
   if (lbl) lbl.textContent = val ? 'Unlocked' : 'Locked';
   showToast(val ? 'Lesson unlocked!' : 'Lesson locked!');
 }
 function toggleUnitLock(ui, val) {
-  const s = getLocks();
-  s[ui] = {};
+  const s = getAccessLocks();
+  if (!s[ui]) s[ui] = {};
   CURRICULUM[ui].lessons.forEach((_, li) => s[ui][li] = val);
-  saveLocks(s);
+  saveAccessLocks(s);
   buildAccessControls();
   buildDashboard();
   showToast(val ? 'Unit unlocked!' : 'Unit locked!');
 }
-function setAllAccess(val) {
+function setAllAccessFor(val) {
   const s = {};
   CURRICULUM.forEach((u, ui) => { s[ui] = {}; u.lessons.forEach((_, li) => s[ui][li] = val); });
-  saveLocks(s);
+  saveAccessLocks(s);
   buildAccessControls();
   buildDashboard();
   showToast(val ? 'All lessons unlocked!' : 'All lessons locked!');
 }
-function buildAccessControls() {
+function setAllAccess(val) { setAllAccessFor(val); }
+
+async function loadAccessForTrainee() {
+  const sel = document.getElementById('access-trainee-select');
+  _accessUid = sel ? sel.value : '__global__';
+  buildAccessControls();
+}
+
+async function buildAccessControls() {
   const c = document.getElementById('access-controls-list'); if (!c) return;
   c.innerHTML = '';
+
+  // Populate trainee dropdown if needed
+  const sel = document.getElementById('access-trainee-select');
+  if (sel && sel.options.length <= 1) {
+    const { data } = await _sb.from('user_data').select('user_id,value').eq('key','profile');
+    (data||[]).forEach(row => {
+      const t = row.value || {};
+      const opt = document.createElement('option');
+      opt.value = row.user_id;
+      opt.textContent = `👤 ${t.name || t.email || row.user_id.substring(0,8)}`;
+      sel.appendChild(opt);
+    });
+    // Restore selected
+    if (_accessUid !== '__global__') sel.value = _accessUid;
+  }
+
+  const locks = getAccessLocks();
+  const isGlobal = _accessUid === '__global__';
+  const label = isGlobal ? 'default (all trainees)' : sel?.options[sel.selectedIndex]?.textContent || 'this trainee';
+
   CURRICULUM.forEach((u, ui) => {
-    const unlocked = u.lessons.filter((_, li) => isUnlocked(ui, li)).length;
+    const lockState = locks[ui] || {};
+    const unlockedCount = u.lessons.filter((_, li) => {
+      if (lockState[li] === undefined) return true;
+      return lockState[li];
+    }).length;
     const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
     const rows = u.lessons.map((l, li) => {
-      const on = isUnlocked(ui, li);
-      return `<tr><td class="lname">${li+1}. ${l.title}</td><td style="width:140px"><label class="toggle-wrap"><label class="toggle"><input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)"><span class="toggle-slider"></span></label><span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span></label></td></tr>`;
+      const on = lockState[li] === undefined ? true : lockState[li];
+      return `<tr><td class="lname">${li+1}. ${l.title}</td><td style="width:160px">
+        <label class="toggle-wrap"><label class="toggle">
+          <input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)">
+          <span class="toggle-slider"></span></label>
+          <span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span>
+        </label></td></tr>`;
     }).join('');
-    card.innerHTML = `<div class="unit-lock-header"><div><div style="font-size:13px;font-weight:600;color:var(--gray-800)">Unit ${ui+1}: ${u.unit}</div><div style="font-size:11px;color:var(--gray-400);margin-top:2px">${u.lessons.length} lessons · ${unlocked} unlocked</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button><button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button></div></div><table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
+    card.innerHTML = `<div class="unit-lock-header">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800)">Unit ${ui+1}: ${u.unit}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${u.lessons.length} lessons · ${unlockedCount} unlocked for ${label}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button>
+        <button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button>
+      </div></div>
+      <table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
     c.appendChild(card);
   });
 }
