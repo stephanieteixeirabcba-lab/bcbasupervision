@@ -1998,8 +1998,8 @@ async function openGradeModal(uid, ui, li){
   if(existing){ existing.remove(); return; }
 
   // Fetch latest hw data
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw = data?.value || {};
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = data?.[0]?.value || {};
   const rubric = hw.rubric || {};
   const overallGrade = hw.overallGrade || '';
 
@@ -2048,8 +2048,8 @@ async function openGradeModal(uid, ui, li){
 async function deleteSubmission(uid, ui, li, name){
   if(!confirm(`Delete ${name}'s submission for this lesson? This cannot be undone.`)) return;
   // Reset the hw row to blank (keep text as draft but mark unsubmitted)
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw = data?.value || {};
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = data?.[0]?.value || {};
   const reset = {text: hw.text||'', submitted:false, feedback:'', overallGrade:'', rubric:{}, redoRequested:false};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:reset},{onConflict:'user_id,key'});
   if(error){ showToast('Error: '+error.message); return; }
@@ -2059,8 +2059,8 @@ async function deleteSubmission(uid, ui, li, name){
 
 async function requestRedo(uid, ui, li, name){
   if(!confirm(`Request ${name} to redo this submission? They will see a notice and be able to resubmit.`)) return;
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw = data?.value || {};
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = data?.[0]?.value || {};
   // Keep their text visible but unlock for resubmission, set redo flag
   const updated = {...hw, submitted:false, redoRequested:true, redoRequestedAt: new Date().toLocaleDateString()};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
@@ -2076,8 +2076,8 @@ async function saveInlineGrade(uid, ui, li){
   const rkey = `${uid}_${ui}_${li}`;
   const rubric = (window._rubricTemp&&window._rubricTemp[rkey]) || {};
 
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw = data?.value || {};
+  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = data?.[0]?.value || {};
   const updated = {...hw, feedback:fb, overallGrade:overall, rubric:{...hw.rubric,...rubric}};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
   if(error){ showToast('Error: '+error.message); return; }
@@ -2477,8 +2477,8 @@ async function postForumReply(ui,li,qi){
 
   const key=`forum_${ui}_${li}_${qi}`;
   // Fetch current posts
-  const {data:row}=await _sb.from('shared_data').select('value').eq('key',key).maybeSingle();
-  const posts=row?.value||[];
+  const {data:row}=await _sb.from('shared_data').select('value').eq('key',key).limit(1);
+  const posts=row?.[0]?.value||[];
 
   const newPost={
     uid: currentUser.id||currentUser.email,
@@ -2501,8 +2501,8 @@ async function postForumReply(ui,li,qi){
 async function deleteForumPost(ui, li, qi, postIdx) {
   if (!confirm('Delete this post? This cannot be undone.')) return;
   const key = `forum_${ui}_${li}_${qi}`;
-  const { data: row } = await _sb.from('shared_data').select('value').eq('key', key).maybeSingle();
-  const posts = row?.value || [];
+  const { data: row } = await _sb.from('shared_data').select('value').eq('key', key).limit(1);
+  const posts = row?.[0]?.value || [];
   posts.splice(postIdx, 1);
   await _sb.from('shared_data').upsert({ key, value: posts }, { onConflict: 'key' });
   _cache.shared[key] = posts;
@@ -2533,8 +2533,8 @@ async function loadHWContent(){
   }
   // Always fetch fresh from Supabase so graded feedback shows immediately
   if(currentUser?.id){
-    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).maybeSingle();
-    if(fresh?.value) _cache.user[`hw_${ui}_${li}`]=fresh.value;
+    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).limit(1);
+    if(fresh?.[0]?.value) _cache.user[`hw_${ui}_${li}`]=fresh[0].value;
   }
   // Route to the canonical homework lesson for this week group
   const {hw, hwLi} = getHWForLesson(ui, li);
@@ -2648,8 +2648,8 @@ async function saveFeedback(uid,ui,li){
   // Also merge in any rubric from temp store
   const rkey=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[rkey])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw=data?.value||{text:'',submitted:false,feedback:''};
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw=data?.[0]?.value||{text:'',submitted:false,feedback:''};
   const updated={...hw,feedback:fb,overallGrade:overall,rubric:{...hw.rubric,...rubric}};
   const {error:saveErr} = await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
   // Clear temp rubric store for this submission
@@ -2678,8 +2678,8 @@ function setRubricGrade(uid,ui,li,criterion,level,btn){
 async function saveFeedbackRubric(uid,ui,li){
   const key=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[key])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).maybeSingle();
-  const hw=data?.value||{text:'',submitted:false,feedback:''};
+  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw=data?.[0]?.value||{text:'',submitted:false,feedback:''};
   await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,rubric:{...hw.rubric,...rubric}}},{onConflict:'user_id,key'});
 }
 
