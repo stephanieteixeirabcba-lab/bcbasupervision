@@ -661,7 +661,7 @@ create policy "Authenticated can write shared" on shared_data
 
     <!-- ACCESS CONTROLS -->
     <section class="page" id="page-access">
-      <div class="page-header"><h1>Access controls</h1><p>Set access per trainee — each person can have their own unlocked units and lessons</p></div>
+      <div class="page-header"><h1>Access controls</h1><p>Control what each trainee can see and when homework is released</p></div>
 
       <!-- Trainee selector -->
       <div class="card" style="margin-bottom:1rem">
@@ -672,17 +672,20 @@ create policy "Authenticated can write shared" on shared_data
               <option value="__global__">🌐 Default (applies to all trainees)</option>
             </select>
           </div>
-          <div style="display:flex;flex-direction:column;gap:6px;align-self:flex-end">
-            <button class="btn btn-sm btn-primary" onclick="setAllAccessFor(true)">Unlock all</button>
-            <button class="btn btn-sm" onclick="setAllAccessFor(false)">Lock all</button>
-          </div>
         </div>
         <div style="font-size:12px;color:var(--gray-400);margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)">
           <strong>Default</strong> applies to everyone without individual settings. Individual trainee settings override the default.
         </div>
       </div>
 
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;margin-bottom:1rem;border-bottom:2px solid var(--gray-100)">
+        <button id="access-tab-lessons" onclick="switchAccessTab('lessons')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--coral);margin-bottom:-2px;color:var(--coral)">Lessons</button>
+        <button id="access-tab-homework" onclick="switchAccessTab('homework')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--gray-400)">Homework</button>
+      </div>
+
       <div id="access-controls-list"></div>
+      <div id="access-hw-list" style="display:none"></div>
     </section>
 
     <!-- MANAGE RESOURCES -->
@@ -1566,18 +1569,21 @@ let _accessUid = '__global__';
 
 function isHWUnlocked(ui, li) {
   if (!isUnlocked(ui, li)) return false;
+  // Always check against the canonical homework lesson index for this week group
+  const hwLi = (WEEK_HOMEWORK_LESSON[ui] !== undefined && WEEK_HOMEWORK_LESSON[ui][li] !== undefined)
+    ? WEEK_HOMEWORK_LESSON[ui][li] : li;
   const personal = uLoad('my_hw_locks', null);
   if (personal !== null && personal !== undefined) {
     if (!personal || Object.keys(personal).length === 0) return true;
     if (personal[ui] === undefined || personal[ui] === null) return true;
-    if (personal[ui][li] === undefined) return true;
-    return personal[ui][li];
+    if (personal[ui][hwLi] === undefined) return true;
+    return personal[ui][hwLi];
   }
   const s = getHWLocks() || {};
   if (Object.keys(s).length === 0) return true;
   if (s[ui] === undefined || s[ui] === null) return true;
-  if (s[ui][li] === undefined) return true;
-  return s[ui][li];
+  if (s[ui][hwLi] === undefined) return true;
+  return s[ui][hwLi];
 }
 
 function toggleHWLessonLock(ui, li, val) {
@@ -1651,15 +1657,27 @@ async function loadAccessForTrainee() {
   await buildAccessControls();
 }
 
+let _accessTab = 'lessons';
+
+function switchAccessTab(tab) {
+  _accessTab = tab;
+  document.getElementById('access-controls-list').style.display = tab === 'lessons' ? '' : 'none';
+  document.getElementById('access-hw-list').style.display = tab === 'homework' ? '' : 'none';
+  const tl = document.getElementById('access-tab-lessons');
+  const th = document.getElementById('access-tab-homework');
+  if (tl) { tl.style.borderBottomColor = tab === 'lessons' ? 'var(--coral)' : 'transparent'; tl.style.color = tab === 'lessons' ? 'var(--coral)' : 'var(--gray-400)'; }
+  if (th) { th.style.borderBottomColor = tab === 'homework' ? 'var(--coral)' : 'transparent'; th.style.color = tab === 'homework' ? 'var(--coral)' : 'var(--gray-400)'; }
+  if (tab === 'homework') buildHWAccessControls();
+}
+
 async function buildAccessControls() {
   const c = document.getElementById('access-controls-list'); if (!c) return;
-  c.innerHTML = '';
+  c.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:0.5rem 0">Loading...</div>';
 
-  // Always repopulate trainee dropdown
+  // Always repopulate trainee dropdown fresh
   const sel = document.getElementById('access-trainee-select');
   if (sel) {
     const currentVal = _accessUid;
-    // Clear all except default option
     while (sel.options.length > 1) sel.remove(1);
     const { data } = await _sb.from('user_data').select('user_id,value').eq('key','profile');
     (data||[]).forEach(row => {
@@ -1669,47 +1687,36 @@ async function buildAccessControls() {
       opt.textContent = `👤 ${t.name || t.email || row.user_id.substring(0,8)}`;
       sel.appendChild(opt);
     });
-    // Restore selected value
     sel.value = currentVal;
     if (sel.value !== currentVal) sel.value = '__global__';
+    _accessUid = sel.value;
   }
 
-  // Reload per-trainee locks fresh from Supabase if targeting a specific trainee
+  // Reload per-trainee locks fresh from Supabase
   if (_accessUid !== '__global__') {
     const { data: lockRow } = await _sb.from('shared_data').select('value').eq('key', `locks__${_accessUid}`).maybeSingle();
     if (lockRow?.value) _cache.shared[`locks__${_accessUid}`] = lockRow.value;
     const { data: hwRow } = await _sb.from('shared_data').select('value').eq('key', `hw_locks__${_accessUid}`).maybeSingle();
     if (hwRow?.value) _cache.shared[`hw_locks__${_accessUid}`] = hwRow.value;
   }
-  const locks = getAccessLocks();
-  const isGlobal = _accessUid === '__global__';
-  const label = isGlobal ? 'default (all trainees)' : sel?.options[sel.selectedIndex]?.textContent || 'this trainee';
 
+  const locks = getAccessLocks();
+  const label = _accessUid === '__global__' ? 'all trainees' : sel?.options[sel.selectedIndex]?.textContent?.replace('👤 ','') || 'this trainee';
+
+  c.innerHTML = '';
   CURRICULUM.forEach((u, ui) => {
     const lockState = locks[ui] || {};
-    const unlockedCount = u.lessons.filter((_, li) => {
-      if (lockState[li] === undefined) return true;
-      return lockState[li];
-    }).length;
+    const unlockedCount = u.lessons.filter((_, li) => lockState[li] === undefined ? true : lockState[li]).length;
     const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
-    const hwLockState = (getAccessHWLocks() || {})[ui] || {};
     const rows = u.lessons.map((l, li) => {
       const on = lockState[li] === undefined ? true : lockState[li];
-      const hwOn = hwLockState[li] === undefined ? true : hwLockState[li];
       return `<tr>
         <td class="lname">${li+1}. ${l.title}</td>
-        <td style="width:140px">
+        <td style="width:150px">
           <label class="toggle-wrap"><label class="toggle">
             <input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)">
             <span class="toggle-slider"></span></label>
             <span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span>
-          </label>
-        </td>
-        <td style="width:140px">
-          <label class="toggle-wrap"><label class="toggle">
-            <input type="checkbox" ${hwOn?'checked':''} onchange="toggleHWLessonLock(${ui},${li},this.checked)">
-            <span class="toggle-slider"></span></label>
-            <span class="toggle-label" id="hw-lbl-${ui}-${li}">${hwOn?'Released':'Locked'}</span>
           </label>
         </td>
       </tr>`;
@@ -1723,7 +1730,72 @@ async function buildAccessControls() {
         <button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button>
         <button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button>
       </div></div>
-      <table class="lock-table"><thead><tr><th>Lesson</th><th>Lesson Access</th><th>Homework</th></tr></thead><tbody>${rows}</tbody></table>`;
+      <table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
+    c.appendChild(card);
+  });
+
+  // If homework tab is active, refresh it too
+  if (_accessTab === 'homework') buildHWAccessControls();
+}
+
+function buildHWAccessControls() {
+  const c = document.getElementById('access-hw-list'); if (!c) return;
+  c.innerHTML = '';
+  const hwLocks = getAccessHWLocks() || {};
+  const label = _accessUid === '__global__' ? 'all trainees' : 'this trainee';
+
+  // Build unique homework groups from WEEK_HOMEWORK_LESSON
+  // For each unit, find the distinct hwLi values (one per week group)
+  CURRICULUM.forEach((u, ui) => {
+    const whlMap = WEEK_HOMEWORK_LESSON[ui] || {};
+    // Collect unique homework lesson indices in order
+    const seen = new Set();
+    const hwGroups = [];
+    u.lessons.forEach((l, li) => {
+      const hwLi = whlMap[li] !== undefined ? whlMap[li] : li;
+      if (!seen.has(hwLi)) {
+        seen.add(hwLi);
+        // Get lessons that belong to this group
+        const groupLessons = u.lessons
+          .map((ll, lli) => ({ title: ll.title, li: lli }))
+          .filter(({ li: lli }) => (whlMap[lli] !== undefined ? whlMap[lli] : lli) === hwLi);
+        // Get the homework title
+        const custom = getCC(ui, hwLi);
+        const wc = getWeekContent(ui, hwLi);
+        const hwTitle = custom?.homework?.title || wc?.homework?.title || `Homework — ${u.lessons[hwLi].title}`;
+        hwGroups.push({ hwLi, hwTitle, groupLessons });
+      }
+    });
+
+    if (hwGroups.length === 0) return;
+
+    const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
+    const rows = hwGroups.map(({ hwLi, hwTitle, groupLessons }) => {
+      const hwState = hwLocks[ui] || {};
+      const released = hwState[hwLi] === undefined ? true : hwState[hwLi];
+      const lessonNames = groupLessons.map(g => `L${g.li+1}`).join(', ');
+      return `<tr>
+        <td style="padding:10px 8px">
+          <div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:2px">${hwTitle}</div>
+          <div style="font-size:11px;color:var(--gray-400)">Covers ${lessonNames}</div>
+        </td>
+        <td style="width:160px;padding:10px 8px">
+          <label class="toggle-wrap"><label class="toggle">
+            <input type="checkbox" ${released?'checked':''} onchange="toggleHWLessonLock(${ui},${hwLi},this.checked)">
+            <span class="toggle-slider"></span></label>
+            <span class="toggle-label" id="hw-lbl-${ui}-${hwLi}">${released?'Released':'Locked'}</span>
+          </label>
+        </td>
+      </tr>`;
+    }).join('');
+
+    card.innerHTML = `<div class="unit-lock-header">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800)">Unit ${ui+1}: ${u.unit}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${hwGroups.length} homework assignment${hwGroups.length>1?'s':''} for ${label}</div>
+      </div>
+    </div>
+    <table class="lock-table"><thead><tr><th>Assignment</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
     c.appendChild(card);
   });
 }
