@@ -1335,6 +1335,12 @@ const SUPABASE_URL = 'https://azrfgrevhwfosjroxohe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_CYu4y1jZn7m7w0yujahUpw_GHECmdvW';
 let _sb = null;
 
+// ── QUIZ PROXY URL ─────────────────────────────────────────
+// Set this to your Cloudflare Worker URL after deploying quiz-proxy-worker.js
+// e.g. 'https://bcba-quiz-proxy.YOUR-NAME.workers.dev'
+const QUIZ_PROXY_URL = '';
+
+
 async function initSupabase() {
   if (!SUPABASE_URL || SUPABASE_URL.includes('PASTE_') ||
       !SUPABASE_KEY || SUPABASE_KEY.includes('PASTE_')) {
@@ -2784,8 +2790,16 @@ Respond ONLY with valid JSON in this exact format, no other text:
   ]
 }`;
 
+  if (!QUIZ_PROXY_URL) {
+    c.innerHTML=`<div class="card" style="text-align:center;padding:2rem">
+      <div style="font-size:2rem;margin-bottom:0.75rem">&#129302;</div>
+      <p style="font-size:14px;font-weight:600;color:var(--gray-800);margin-bottom:0.5rem">Quiz proxy not configured</p>
+      <p style="font-size:13px;color:var(--gray-500);line-height:1.6">To enable AI quiz generation, deploy the Cloudflare Worker and set <code>QUIZ_PROXY_URL</code> in the code.<br>See <strong>quiz-proxy-worker.js</strong> for instructions.</p>
+    </div>`;
+    return;
+  }
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(QUIZ_PROXY_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -2804,7 +2818,7 @@ Respond ONLY with valid JSON in this exact format, no other text:
     uSave(`quiz_${ui}_${li}`,{questions:_quizQuestions,answers:{},submitted:false});
     renderQuiz(ui,li);
   } catch(e){
-    c.innerHTML=`<div class="card"><p style="color:#c0392b;font-size:14px">Could not generate quiz. Please try again.</p></div>`;
+    c.innerHTML=`<div class="card"><p style="color:#c0392b;font-size:14px">Could not generate quiz. Please check your proxy URL and try again.</p></div>`;
     console.error(e);
   }
 }
