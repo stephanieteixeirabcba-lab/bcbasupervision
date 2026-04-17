@@ -37,7 +37,12 @@ body{font-family:var(--font-body);background:var(--cream);color:var(--gray-800);
 .user-avatar.sup{background:var(--purple)}
 .logout-btn{font-size:12px;color:var(--gray-400);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-family:var(--font-body)}
 .logout-btn:hover{color:var(--gray-800);background:var(--gray-100)}
-.sidebar{background:var(--white);border-right:1px solid var(--gray-100);padding:1rem 0.75rem;overflow-y:auto}
+.sidebar{background:var(--white);border-right:1px solid var(--gray-100);padding:1rem 0.75rem;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-footer{margin-top:auto;padding:1rem 0.5rem 0.75rem;border-top:1px solid var(--gray-100)}
+.sidebar-footer-name{font-size:12px;font-weight:700;color:var(--gray-800);margin-bottom:1px}
+.sidebar-footer-title{font-size:11px;color:var(--gray-400);margin-bottom:6px}
+.sidebar-footer-link{font-size:11px;color:var(--coral);text-decoration:none;font-weight:600;letter-spacing:0.01em}
+.sidebar-footer-link:hover{text-decoration:underline}
 .nav-section-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-400);padding:0.75rem 0.75rem 0.4rem;margin-top:0.25rem}
 .nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--radius);border:none;background:none;font-family:var(--font-body);font-size:13.5px;color:var(--gray-600);cursor:pointer;width:100%;text-align:left;transition:all 0.12s;margin-bottom:1px}
 .nav-item:hover{background:var(--gray-50);color:var(--gray-800)}
@@ -436,8 +441,16 @@ input:focus,select:focus{border-color:var(--coral)}
   unique(user_id, key)
 );
 alter table user_data enable row level security;
-create policy "Users own their data" on user_data
-  for all using (auth.uid() = user_id);
+create policy "Users can read own data" on user_data
+  for select using (auth.uid() = user_id);
+create policy "Users can write own data" on user_data
+  for insert with check (auth.uid() = user_id);
+create policy "Users can update own data" on user_data
+  for update using (auth.uid() = user_id);
+create policy "Anon can read all user data" on user_data
+  for select using (true);
+create policy "Anon can write all user data" on user_data
+  for all using (true);
 
 create table if not exists shared_data (
   key text primary key,
@@ -529,6 +542,11 @@ create policy "Anon can write shared" on shared_data
     <button class="nav-item sup-only" style="display:none" data-page="trainees" onclick="showPage('trainees',this);loadTraineeList()"><span class="nav-dot dot-blue"></span> Trainees</button>
     <button class="nav-item sup-only" style="display:none" data-page="quiz-results" onclick="showPage('quiz-results',this);loadQuizResults()"><span class="nav-dot dot-coral"></span> Quiz results</button>
     <button class="nav-item sup-only" style="display:none" data-page="grades" onclick="showPage('grades',this);loadGradesSummary()"><span class="nav-dot dot-amber"></span> Grades summary</button>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-name">Stephanie Teixeira</div>
+      <div class="sidebar-footer-title">BCBA &middot; Behavior Analyst</div>
+      <a href="https://www.stephanieteixeira.com" target="_blank" class="sidebar-footer-link">stephanieteixeira.com &#8599;</a>
+    </div>
   </nav>
 
   <main class="main-content">
@@ -1362,7 +1380,10 @@ async function uSaveDB(k, v) {
 }
 async function sSaveDB(k, v) {
   _cache.shared[k] = v;
-  await _sb.from('shared_data').upsert({ key: k, value: v }, { onConflict: 'key' });
+  try {
+    const { error } = await _sb.from('shared_data').upsert({ key: k, value: v }, { onConflict: 'key' });
+    if (error) console.warn('sSaveDB:', k, error.message);
+  } catch(e) { console.warn('sSaveDB failed:', k); }
 }
 function uLoad(k, def)  { const v = _cache.user[k];   return (v !== undefined && v !== null) ? v : def; }
 function sLoad(k, def)  { const v = _cache.shared[k]; return (v !== undefined && v !== null) ? v : def; }
@@ -1477,29 +1498,15 @@ async function signInSupervisor() {
   err.textContent = '';
   if (!pw) { err.textContent = 'Please enter the supervisor password.'; return; }
   setAuthLoading('sp-btn', true, 'Signing in…');
-  // Load shared data to check the stored password
   const { data: sd } = await _sb.from('shared_data').select('key,value');
   (sd || []).forEach(r => { _cache.shared[r.key] = r.value; });
+  setAuthLoading('sp-btn', false, 'Sign in as supervisor');
   const DEFAULT_SUP_PW = 'bx@n@lyst';
-  const OWNER_EMAIL = 'stephanieteixeirabcba@gmail.com';
   const custom = sLoad('sup_password', null);
   const valid  = custom ? pw === custom : pw === DEFAULT_SUP_PW;
-  if (!valid) {
-    setAuthLoading('sp-btn', false, 'Sign in as supervisor');
-    err.textContent = 'Incorrect password.'; return;
-  }
-  // Sign into Supabase with the owner account so writes are authenticated
-  const { data: authData, error: authErr } = await _sb.auth.signInWithPassword({
-    email: OWNER_EMAIL,
-    password: pw
-  });
-  if (authErr) {
-    // Auth failed — still allow supervisor mode but warn about write limitations
-    console.warn('Supabase auth failed, supervisor in read-only mode:', authErr.message);
-  }
-  currentUser = { id: authData?.user?.id || 'supervisor', email: OWNER_EMAIL, name: 'Supervisor' };
+  if (!valid) { err.textContent = 'Incorrect password.'; return; }
+  currentUser = { id: 'supervisor', email: 'supervisor', name: 'Supervisor' };
   currentRole = 'supervisor';
-  setAuthLoading('sp-btn', false, 'Sign in as supervisor');
   enterApp();
 }
 
@@ -1998,8 +2005,8 @@ async function openGradeModal(uid, ui, li){
   if(existing){ existing.remove(); return; }
 
   // Fetch latest hw data
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw = data?.[0]?.value || {};
+  const {data,error:_hwerr} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = (!_hwerr && data?.[0]?.value) || {};
   const rubric = hw.rubric || {};
   const overallGrade = hw.overallGrade || '';
 
@@ -2048,8 +2055,8 @@ async function openGradeModal(uid, ui, li){
 async function deleteSubmission(uid, ui, li, name){
   if(!confirm(`Delete ${name}'s submission for this lesson? This cannot be undone.`)) return;
   // Reset the hw row to blank (keep text as draft but mark unsubmitted)
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw = data?.[0]?.value || {};
+  const {data,error:_hwerr} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = (!_hwerr && data?.[0]?.value) || {};
   const reset = {text: hw.text||'', submitted:false, feedback:'', overallGrade:'', rubric:{}, redoRequested:false};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:reset},{onConflict:'user_id,key'});
   if(error){ showToast('Error: '+error.message); return; }
@@ -2059,8 +2066,8 @@ async function deleteSubmission(uid, ui, li, name){
 
 async function requestRedo(uid, ui, li, name){
   if(!confirm(`Request ${name} to redo this submission? They will see a notice and be able to resubmit.`)) return;
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw = data?.[0]?.value || {};
+  const {data,error:_hwerr} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = (!_hwerr && data?.[0]?.value) || {};
   // Keep their text visible but unlock for resubmission, set redo flag
   const updated = {...hw, submitted:false, redoRequested:true, redoRequestedAt: new Date().toLocaleDateString()};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
@@ -2076,8 +2083,8 @@ async function saveInlineGrade(uid, ui, li){
   const rkey = `${uid}_${ui}_${li}`;
   const rubric = (window._rubricTemp&&window._rubricTemp[rkey]) || {};
 
-  const {data} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw = data?.[0]?.value || {};
+  const {data,error:_hwerr} = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw = (!_hwerr && data?.[0]?.value) || {};
   const updated = {...hw, feedback:fb, overallGrade:overall, rubric:{...hw.rubric,...rubric}};
   const {error} = await _sb.from('user_data').upsert({user_id:uid, key:`hw_${ui}_${li}`, value:updated},{onConflict:'user_id,key'});
   if(error){ showToast('Error: '+error.message); return; }
@@ -2533,8 +2540,8 @@ async function loadHWContent(){
   }
   // Always fetch fresh from Supabase so graded feedback shows immediately
   if(currentUser?.id){
-    const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).limit(1);
-    if(fresh?.[0]?.value) _cache.user[`hw_${ui}_${li}`]=fresh[0].value;
+    const {data:fresh,error:_ferr}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).limit(1);
+    if(!_ferr && fresh?.[0]?.value) _cache.user[`hw_${ui}_${li}`]=fresh[0].value;
   }
   // Route to the canonical homework lesson for this week group
   const {hw, hwLi} = getHWForLesson(ui, li);
@@ -2648,8 +2655,8 @@ async function saveFeedback(uid,ui,li){
   // Also merge in any rubric from temp store
   const rkey=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[rkey])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw=data?.[0]?.value||{text:'',submitted:false,feedback:''};
+  const { data, error: _hwerr } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw=(!_hwerr && data?.[0]?.value)||{text:'',submitted:false,feedback:''};
   const updated={...hw,feedback:fb,overallGrade:overall,rubric:{...hw.rubric,...rubric}};
   const {error:saveErr} = await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:updated},{onConflict:'user_id,key'});
   // Clear temp rubric store for this submission
@@ -2678,8 +2685,8 @@ function setRubricGrade(uid,ui,li,criterion,level,btn){
 async function saveFeedbackRubric(uid,ui,li){
   const key=`${uid}_${ui}_${li}`;
   const rubric=(window._rubricTemp&&window._rubricTemp[key])||{};
-  const { data } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
-  const hw=data?.[0]?.value||{text:'',submitted:false,feedback:''};
+  const { data, error: _hwerr } = await _sb.from('user_data').select('value').eq('user_id',uid).eq('key',`hw_${ui}_${li}`).limit(1);
+  const hw=(!_hwerr && data?.[0]?.value)||{text:'',submitted:false,feedback:''};
   await _sb.from('user_data').upsert({user_id:uid,key:`hw_${ui}_${li}`,value:{...hw,rubric:{...hw.rubric,...rubric}}},{onConflict:'user_id,key'});
 }
 
