@@ -2423,12 +2423,15 @@ async function loadForumQuestions(){
       const isSup=p.role==='supervisor';
       const bg=isSup?'var(--purple)':avatarColor(p.name||'?');
       const initials=(p.name||'?').split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2);
+      const postIdx = posts.indexOf(p);
+      const delBtn = currentRole==='supervisor' ? `<button onclick="deleteForumPost(${ui},${li},${qi},${postIdx})" style="margin-left:8px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray-400);padding:0" title="Delete">delete</button>` : '';
       return `<div class="forum-post">
         <div class="forum-avatar" style="background:${bg}">${initials}</div>
         <div class="forum-post-body">
           <div class="forum-post-name">${p.name||'Trainee'}
             ${isMe?'<span class="forum-post-you">you</span>':''}
             ${isSup?'<span class="forum-post-sup">supervisor</span>':''}
+            ${delBtn}
           </div>
           <div class="forum-post-text">${p.text}</div>
           <div class="forum-post-time">${p.ts||''}</div>
@@ -2477,6 +2480,18 @@ async function postForumReply(ui,li,qi){
   input.value='';
   showToast('Reply posted! 💬');
   // Re-render just this question's posts
+  loadForumQuestions();
+}
+
+async function deleteForumPost(ui, li, qi, postIdx) {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  const key = `forum_${ui}_${li}_${qi}`;
+  const { data: row } = await _sb.from('shared_data').select('value').eq('key', key).maybeSingle();
+  const posts = row?.value || [];
+  posts.splice(postIdx, 1);
+  await _sb.from('shared_data').upsert({ key, value: posts }, { onConflict: 'key' });
+  _cache.shared[key] = posts;
+  showToast('Post deleted.');
   loadForumQuestions();
 }
 
