@@ -1338,6 +1338,17 @@ function saveLocksFor(uid, s) {
 }
 const getLocks  = () => sLoad('locks', {});
 const saveLocks = (s) => sSave('locks', s);
+const getHWLocks  = () => sLoad('hw_locks', {});
+const saveHWLocks = (s) => sSave('hw_locks', s);
+function getHWLocksFor(uid) {
+  if (!uid || uid === '__global__') return sLoad('hw_locks', {});
+  return sLoad(`hw_locks__${uid}`, null);
+}
+function saveHWLocksFor(uid, s) {
+  if (!uid || uid === '__global__') return sSave('hw_locks', s);
+  sSave(`hw_locks__${uid}`, s);
+}
+function getAccessHWLocks() { return getHWLocksFor(_accessUid); }
 const getResources  = () => sLoad('resources', DEFAULT_RESOURCES);
 const saveResources = (r) => sSave('resources', r);
 
@@ -1510,6 +1521,31 @@ function isUnlocked(ui, li) {
 // Current trainee being edited in the access panel
 let _accessUid = '__global__';
 
+function isHWUnlocked(ui, li) {
+  if (!isUnlocked(ui, li)) return false;
+  const personal = uLoad('my_hw_locks', null);
+  if (personal !== null) {
+    if (!personal || Object.keys(personal).length === 0) return true;
+    if (personal[ui] === undefined) return true;
+    if (personal[ui][li] === undefined) return true;
+    return personal[ui][li];
+  }
+  const s = getHWLocks();
+  if (!s || Object.keys(s).length === 0) return true;
+  if (s[ui] === undefined) return true;
+  if (s[ui][li] === undefined) return true;
+  return s[ui][li];
+}
+
+function toggleHWLessonLock(ui, li, val) {
+  const s = getAccessHWLocks() || {};
+  if (!s[ui]) s[ui] = {};
+  s[ui][li] = val;
+  saveAccessHWLocks(s);
+  const lbl = document.getElementById(`hw-lbl-${ui}-${li}`);
+  if (lbl) lbl.textContent = val ? 'Released' : 'Locked';
+}
+
 function getAccessLocks() {
   if (_accessUid === '__global__') return getLocks();
   // Load from shared_data where supervisor saved per-user locks
@@ -1524,6 +1560,16 @@ function saveAccessLocks(s) {
     _sb.from('user_data').upsert({user_id: _accessUid, key: 'my_locks', value: s}, {onConflict:'user_id,key'});
     // Update cache if this is the current user
     if (currentUser && currentUser.id === _accessUid) _cache.user['my_locks'] = s;
+  }
+}
+
+function saveAccessHWLocks(s) {
+  if (_accessUid === '__global__') {
+    saveHWLocks(s);
+  } else {
+    saveHWLocksFor(_accessUid, s);
+    _sb.from('user_data').upsert({user_id: _accessUid, key: 'my_hw_locks', value: s}, {onConflict:'user_id,key'});
+    if (currentUser && currentUser.id === _accessUid) _cache.user['my_hw_locks'] = s;
   }
 }
 
@@ -1592,14 +1638,27 @@ async function buildAccessControls() {
       return lockState[li];
     }).length;
     const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
+    const hwLockState = getAccessHWLocks()[ui] || {};
     const rows = u.lessons.map((l, li) => {
       const on = lockState[li] === undefined ? true : lockState[li];
-      return `<tr><td class="lname">${li+1}. ${l.title}</td><td style="width:160px">
-        <label class="toggle-wrap"><label class="toggle">
-          <input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)">
-          <span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span>
-        </label></td></tr>`;
+      const hwOn = hwLockState[li] === undefined ? true : hwLockState[li];
+      return `<tr>
+        <td class="lname">${li+1}. ${l.title}</td>
+        <td style="width:140px">
+          <label class="toggle-wrap"><label class="toggle">
+            <input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)">
+            <span class="toggle-slider"></span></label>
+            <span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span>
+          </label>
+        </td>
+        <td style="width:140px">
+          <label class="toggle-wrap"><label class="toggle">
+            <input type="checkbox" ${hwOn?'checked':''} onchange="toggleHWLessonLock(${ui},${li},this.checked)">
+            <span class="toggle-slider"></span></label>
+            <span class="toggle-label" id="hw-lbl-${ui}-${li}">${hwOn?'Released':'Locked'}</span>
+          </label>
+        </td>
+      </tr>`;
     }).join('');
     card.innerHTML = `<div class="unit-lock-header">
       <div>
@@ -1610,7 +1669,7 @@ async function buildAccessControls() {
         <button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button>
         <button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button>
       </div></div>
-      <table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
+      <table class="lock-table"><thead><tr><th>Lesson</th><th>Lesson Access</th><th>Homework</th></tr></thead><tbody>${rows}</tbody></table>`;
     c.appendChild(card);
   });
 }
@@ -1989,7 +2048,7 @@ function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classL
 function buildDashboard(){
   const grid=document.getElementById('dash-unit-grid');if(!grid)return;grid.innerHTML='';
   let unlocked=0,done=0,quizzesTaken=0;
-  const UNIT_EMOJIS=['🌟','💡','📊','🔬','❤️','⚖️','🔍','🛠️'];
+  const UNIT_EMOJIS=['🌟','💡','📊','🔬','❤️','⚖️','🔍','🛠️','🎯','👥'];
   CURRICULUM.forEach((u,ui)=>{
     let uDone=0,uUnlocked=0;
     for(let li=0;li<u.lessons.length;li++){
@@ -2308,6 +2367,14 @@ async function loadHWContent(){
   const li=parseInt(document.getElementById('hw-lesson-select').value);
   const c=document.getElementById('hw-content');
   if(!isUnlocked(ui,li)){c.innerHTML='<div class="card"><p style="color:var(--gray-400);font-size:14px">🔒 This lesson is locked.</p></div>';return;}
+  if(!isHWUnlocked(ui,li)){
+    c.innerHTML=`<div class="card" style="text-align:center;padding:2rem 1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:0.75rem">&#128203;</div>
+      <p style="color:var(--gray-800);font-size:14px;font-weight:600;margin-bottom:0.5rem">Homework not yet released</p>
+      <p style="color:var(--gray-500);font-size:13px;line-height:1.6">Your supervisor will release this assignment when you are ready. Check back soon or ask at your next supervision session.</p>
+    </div>`;
+    return;
+  }
   // Always fetch fresh from Supabase so graded feedback shows immediately
   if(currentUser?.id){
     const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).maybeSingle();
