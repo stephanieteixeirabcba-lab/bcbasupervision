@@ -135,7 +135,11 @@ textarea:focus{border-color:var(--coral)}
 .hw-prompt{background:var(--amber-light);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;border-left:4px solid var(--amber)}
 .hw-prompt-label{font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
 .hw-prompt-title{font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:8px}
-.hw-prompt-body{font-size:13.5px;color:var(--gray-600);line-height:1.7;white-space:pre-line}
+.hw-prompt-body{font-size:13.5px;color:var(--gray-600);line-height:1.7}
+.hw-prompt-body p{margin-bottom:0.75rem}
+.hw-prompt-body p:last-child{margin-bottom:0}
+.hw-prompt-body strong{color:var(--gray-800);font-weight:600}
+.hw-prompt-body br{display:block;margin-bottom:0.2rem}
 /* RESOURCES */
 .resource-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100)}
 .resource-item:last-child{border-bottom:none}
@@ -1077,6 +1081,19 @@ const WEEK_CONTENT = {
 };
 
 // ── CURRICULUM DATA ─────────────────────────────────────
+const WEEK_HOMEWORK_LESSON = {
+  0: {0: 1, 1: 1, 2: 4, 3: 4, 4: 4},
+  1: {0: 2, 1: 2, 2: 2},
+  2: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5, 6: 6},
+  3: {0: 2, 1: 2, 2: 2, 3: 4, 4: 4},
+  4: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5},
+  5: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5},
+  6: {0: 2, 1: 2, 2: 2, 3: 7, 4: 7, 5: 7, 6: 7, 7: 7},
+  7: {0: 3, 1: 3, 2: 3, 3: 3, 4: 7, 5: 7, 6: 7, 7: 7, 8: 12, 9: 12, 10: 12, 11: 12, 12: 12},
+  8: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5},
+  9: {0: 3, 1: 3, 2: 3, 3: 3},
+};
+
 const CURRICULUM = [
   { unit:"A Compassionate Approach to Behavior Support", color:"#D85A30", lessons:[
     { title:"Understanding Neurodiversity-Affirming Practices", subtopics:["Defining neurodiversity","The Autism diagnosis prevalence timeline","Common concerns from the neurodivergent community","Labels, compliance, stimming, and eye contact","How to address concerns in clinical practice"] },
@@ -1162,6 +1179,32 @@ const CURRICULUM = [
     { title:"Managing Difficult Staff Situations", subtopics:["Performance management plan and talk","The COIN Method"] }
   ]}
 ];
+function formatHWPrompt(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    .replace(/<p><\/p>/g, '');
+}
+
+function getHWForLesson(ui, li) {
+  // Find the canonical homework lesson for this lesson
+  const hwLi = (WEEK_HOMEWORK_LESSON[ui] !== undefined && WEEK_HOMEWORK_LESSON[ui][li] !== undefined)
+    ? WEEK_HOMEWORK_LESSON[ui][li]
+    : li;
+  const custom = getCC(ui, hwLi);
+  const wc = getWeekContent(ui, hwLi);
+  const l = CURRICULUM[ui].lessons[hwLi];
+  return {
+    hw: custom?.homework || wc?.homework || defaultHomework(l.title, l.subtopics),
+    hwLi
+  };
+}
+
+
 
 // ── READING GUIDE DATA ───────────────────────────────────
 const READING_GUIDES = {
@@ -2391,9 +2434,20 @@ async function loadHWContent(){
     const {data:fresh}=await _sb.from('user_data').select('value').eq('user_id',currentUser.id).eq('key',`hw_${ui}_${li}`).maybeSingle();
     if(fresh?.value) _cache.user[`hw_${ui}_${li}`]=fresh.value;
   }
+  // Route to the canonical homework lesson for this week group
+  const {hw, hwLi} = getHWForLesson(ui, li);
+  // If this lesson is not the homework lesson, show a redirect notice
+  if (hwLi !== li) {
+    const hwLesson = CURRICULUM[ui].lessons[hwLi];
+    c.innerHTML=`<div class="card" style="text-align:center;padding:2rem 1.5rem">
+      <div style="font-size:2rem;margin-bottom:0.75rem">&#128203;</div>
+      <p style="color:var(--gray-800);font-size:14px;font-weight:600;margin-bottom:0.5rem">This week&#39;s homework is combined</p>
+      <p style="color:var(--gray-500);font-size:13px;line-height:1.6;margin-bottom:1.25rem">The homework for this week covers all lessons together. It is attached to the last lesson in the group.</p>
+      <button class="btn btn-primary" onclick="document.getElementById('hw-lesson-select').value=${hwLi};loadHWContent()">Go to Week Homework &rarr;</button>
+    </div>`;
+    return;
+  }
   const l=CURRICULUM[ui].lessons[li];
-  const custom=getCC(ui,li);const wc=getWeekContent(ui,li);
-  const hw=custom&&custom.homework?custom.homework:(wc&&wc.homework?wc.homework:defaultHomework(l.title,l.subtopics));
   const saved=getHW(ui,li);const submitted=saved.submitted;
   const rubric=saved.rubric||{};
   const overallGrade=saved.overallGrade||'';
@@ -2417,7 +2471,7 @@ async function loadHWContent(){
     </div>
     <p style="font-size:13.5px;color:var(--gray-600)">Your supervisor has asked you to revise and resubmit this assignment. Your previous work is shown below — update it and resubmit when ready.</p>
   </div>` : '';
-  c.innerHTML=`<div class="hw-prompt"><div class="hw-prompt-label">Assignment</div><div class="hw-prompt-title">${hw.title}</div><div class="hw-prompt-body">${hw.prompt}</div></div>
+  c.innerHTML=`<div class="hw-prompt"><div class="hw-prompt-label">Assignment</div><div class="hw-prompt-title">${hw.title}</div><div class="hw-prompt-body">${formatHWPrompt(hw.prompt)}</div></div>
     ${redoNotice}
     ${feedbackHtml}
     <div class="card"><div class="card-title">${submitted?'Your submission (submitted)':redoRequested?'✏️ Revise and resubmit':'Your submission'}</div>
