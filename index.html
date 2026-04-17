@@ -1605,16 +1605,19 @@ function setAllAccess(val) { setAllAccessFor(val); }
 async function loadAccessForTrainee() {
   const sel = document.getElementById('access-trainee-select');
   _accessUid = sel ? sel.value : '__global__';
-  buildAccessControls();
+  await buildAccessControls();
 }
 
 async function buildAccessControls() {
   const c = document.getElementById('access-controls-list'); if (!c) return;
   c.innerHTML = '';
 
-  // Populate trainee dropdown if needed
+  // Always repopulate trainee dropdown
   const sel = document.getElementById('access-trainee-select');
-  if (sel && sel.options.length <= 1) {
+  if (sel) {
+    const currentVal = _accessUid;
+    // Clear all except default option
+    while (sel.options.length > 1) sel.remove(1);
     const { data } = await _sb.from('user_data').select('user_id,value').eq('key','profile');
     (data||[]).forEach(row => {
       const t = row.value || {};
@@ -1623,10 +1626,18 @@ async function buildAccessControls() {
       opt.textContent = `👤 ${t.name || t.email || row.user_id.substring(0,8)}`;
       sel.appendChild(opt);
     });
-    // Restore selected
-    if (_accessUid !== '__global__') sel.value = _accessUid;
+    // Restore selected value
+    sel.value = currentVal;
+    if (sel.value !== currentVal) sel.value = '__global__';
   }
 
+  // Reload per-trainee locks fresh from Supabase if targeting a specific trainee
+  if (_accessUid !== '__global__') {
+    const { data: lockRow } = await _sb.from('shared_data').select('value').eq('key', `locks__${_accessUid}`).maybeSingle();
+    if (lockRow?.value) _cache.shared[`locks__${_accessUid}`] = lockRow.value;
+    const { data: hwRow } = await _sb.from('shared_data').select('value').eq('key', `hw_locks__${_accessUid}`).maybeSingle();
+    if (hwRow?.value) _cache.shared[`hw_locks__${_accessUid}`] = hwRow.value;
+  }
   const locks = getAccessLocks();
   const isGlobal = _accessUid === '__global__';
   const label = isGlobal ? 'default (all trainees)' : sel?.options[sel.selectedIndex]?.textContent || 'this trainee';
@@ -2042,7 +2053,7 @@ async function loadGradesSummary(){
 function initApp(){buildDashboard();buildCurriculumGrid();populateAllSelects();populateQuizSelects();buildTraineeResources();if(currentRole==='supervisor'){buildAccessControls();buildManageResources();populateReviewSelect();loadReview();populateManageSelects();renderManageForm();}}
 
 // ── NAVIGATION ───────────────────────────────────────────
-function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='quiz'){const qc=document.getElementById('quiz-content');if(qc&&!qc.innerHTML.trim())qc.innerHTML='<div class="card"><p style="font-size:14px;color:var(--gray-400)">Select a unit and lesson above, then click "Start quiz".</p></div>';}}
+function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='access'){buildAccessControls();}if(id==='quiz'){const qc=document.getElementById('quiz-content');if(qc&&!qc.innerHTML.trim())qc.innerHTML='<div class="card"><p style="font-size:14px;color:var(--gray-400)">Select a unit and lesson above, then click "Start quiz".</p></div>';}}
 
 // ── DASHBOARD ────────────────────────────────────────────
 function buildDashboard(){
