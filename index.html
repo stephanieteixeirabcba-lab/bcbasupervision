@@ -1348,7 +1348,7 @@ function saveHWLocksFor(uid, s) {
   if (!uid || uid === '__global__') return sSave('hw_locks', s);
   sSave(`hw_locks__${uid}`, s);
 }
-function getAccessHWLocks() { return getHWLocksFor(_accessUid); }
+function getAccessHWLocks() { return getHWLocksFor(_accessUid) || {}; }
 const getResources  = () => sLoad('resources', DEFAULT_RESOURCES);
 const saveResources = (r) => sSave('resources', r);
 
@@ -1524,15 +1524,15 @@ let _accessUid = '__global__';
 function isHWUnlocked(ui, li) {
   if (!isUnlocked(ui, li)) return false;
   const personal = uLoad('my_hw_locks', null);
-  if (personal !== null) {
+  if (personal !== null && personal !== undefined) {
     if (!personal || Object.keys(personal).length === 0) return true;
-    if (personal[ui] === undefined) return true;
+    if (personal[ui] === undefined || personal[ui] === null) return true;
     if (personal[ui][li] === undefined) return true;
     return personal[ui][li];
   }
-  const s = getHWLocks();
-  if (!s || Object.keys(s).length === 0) return true;
-  if (s[ui] === undefined) return true;
+  const s = getHWLocks() || {};
+  if (Object.keys(s).length === 0) return true;
+  if (s[ui] === undefined || s[ui] === null) return true;
   if (s[ui][li] === undefined) return true;
   return s[ui][li];
 }
@@ -1649,7 +1649,7 @@ async function buildAccessControls() {
       return lockState[li];
     }).length;
     const card = document.createElement('div'); card.className = 'card'; card.style.marginBottom = '12px';
-    const hwLockState = getAccessHWLocks()[ui] || {};
+    const hwLockState = (getAccessHWLocks() || {})[ui] || {};
     const rows = u.lessons.map((l, li) => {
       const on = lockState[li] === undefined ? true : lockState[li];
       const hwOn = hwLockState[li] === undefined ? true : hwLockState[li];
