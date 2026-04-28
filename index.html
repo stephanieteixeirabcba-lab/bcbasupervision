@@ -1599,7 +1599,7 @@ function buildAccessControls() {
     const rows = u.lessons.map((l, li) => {
       const on = isUnlocked(ui, li);
       return `<tr><td class="lname">${li+1}. ${l.title}</td><td style="width:140px"><label class="toggle-wrap"><label class="toggle"><input type="checkbox" ${on?'checked':''} onchange="toggleLessonLock(${ui},${li},this.checked)"><span class="toggle-slider"></span></label><span class="toggle-label" id="lbl-${ui}-${li}">${on?'Unlocked':'Locked'}</span></label></td></tr>`;
-    }).join('');
+      list.appendChild(el); });
     card.innerHTML = `<div class="unit-lock-header"><div><div style="font-size:13px;font-weight:600;color:var(--gray-800)">Unit ${ui+1}: ${u.unit}</div><div style="font-size:11px;color:var(--gray-400);margin-top:2px">${u.lessons.length} lessons · ${unlocked} unlocked</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="toggleUnitLock(${ui},false)">Lock all</button><button class="btn btn-sm btn-primary" onclick="toggleUnitLock(${ui},true)">Unlock all</button></div></div><table class="lock-table"><thead><tr><th>Lesson</th><th>Access</th></tr></thead><tbody>${rows}</tbody></table>`;
     c.appendChild(card);
   });
@@ -1741,23 +1741,29 @@ function renderTodoList(items, filter) {
     discussion:{ icon:'💬', label:'Discussion questions', color:'var(--teal)',    bg:'var(--teal-light)',    nav:'discussion' },
     reading:   { icon:'📖', label:'Reading guide',       color:'var(--blue)',    bg:'var(--blue-light)',    nav:'curriculum' },
   };
-  list.innerHTML = filtered.map((item, idx) => {
+  list.innerHTML = ''; filtered.forEach((item, idx) => {
     const cfg = typeConfig[item.type];
     const subtitle = item.type === 'discussion'
       ? `${item.count} of ${item.total} questions unanswered`
       : item.type === 'reading' ? 'Read before your supervision session' : 'Not yet submitted';
-    return `<div class="todo-item" data-type="${item.type}" style="display:flex;align-items:center;gap:14px;padding:11px 8px;border-bottom:1px solid var(--gray-100);cursor:pointer;border-radius:var(--radius);transition:background 0.1s" onclick="goToTodo(${item.ui},${item.li},'${item.type}')" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
-      <div style="width:36px;height:36px;border-radius:var(--radius);background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${cfg.icon}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13.5px;font-weight:500;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.lesson}</div>
-        <div style="font-size:12px;color:var(--gray-400);margin-top:1px">Unit ${item.unitNum} · ${subtitle}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:${cfg.bg};color:${cfg.color}">${cfg.label}</span>
-        <span style="font-size:11px;color:var(--gray-400)">→ Go there</span>
-      </div>
-    </div>`;
-  }).join('');
+    const el = document.createElement('div');
+    el.className = 'todo-item';
+    el.setAttribute('data-type', item.type);
+    el.style.cssText = 'display:flex;align-items:center;gap:14px;padding:11px 8px;border-bottom:1px solid var(--gray-100);cursor:pointer;border-radius:10px;transition:background 0.1s';
+    el.onmouseover = function(){ this.style.background='#F9F7F5'; };
+    el.onmouseout  = function(){ this.style.background=''; };
+    el.onclick = function(){ goToTodo(item.ui, item.li, item.type); };
+    el.innerHTML = '<div style="width:36px;height:36px;border-radius:10px;background:' + cfg.bg + ';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + cfg.icon + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13.5px;font-weight:500;color:#2C2824;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.lesson + '</div>' +
+        '<div style="font-size:12px;color:#A09A93;margin-top:1px">Unit ' + item.unitNum + ' &middot; ' + subtitle + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">' +
+        '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:' + cfg.bg + ';color:' + cfg.color + '">' + cfg.label + '</span>' +
+        '<span style="font-size:11px;color:#A09A93">&rarr; Go there</span>' +
+      '</div>';
+    list.appendChild(el);
+  });
 }
 
 function filterTodo(type, btn) {
