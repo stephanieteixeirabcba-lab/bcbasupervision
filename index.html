@@ -1185,8 +1185,8 @@ const WEEK_CONTENT = {
 // ── CURRICULUM DATA ─────────────────────────────────────
 const WEEK_HOMEWORK_LESSON = {
   0: {0: 1, 1: 1, 2: 4, 3: 4, 4: 4},
-  1: {0: 2, 1: 2, 2: 2},
-  2: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5, 6: 6},
+  1: {0: 0, 1: 0, 2: 0},
+  2: {0: 0, 1: 0, 2: 0, 3: 3, 4: 3, 5: 3, 6: 6},
   3: {0: 2, 1: 2, 2: 2, 3: 4, 4: 4},
   4: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5},
   5: {0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5},
@@ -1787,15 +1787,17 @@ async function logout() {
 
 // ── ACCESS CONTROLS ──────────────────────────────────────
 function isUnlocked(ui, li) {
-  // Check per-user locks first (stored in user's own user_data)
-  const personal = uLoad('my_locks', null);
-  if (personal !== null) {
-    if (!personal || Object.keys(personal).length === 0) return true;
-    if (personal[ui] === undefined) return true;
-    if (personal[ui][li] === undefined) return true;
-    return personal[ui][li];
+  // Check per-user locks from shared_data (authoritative — set by supervisor)
+  if (currentUser && currentUser.id && currentUser.id !== 'supervisor') {
+    const perUser = sLoad(`locks__${currentUser.id}`, null);
+    if (perUser !== null) {
+      if (!perUser || Object.keys(perUser).length === 0) return true;
+      if (perUser[ui] === undefined) return true;
+      if (perUser[ui][li] === undefined) return true;
+      return perUser[ui][li];
+    }
   }
-  // Fall back to global default
+  // Fall back to global locks
   const s = getLocks();
   if (!s || Object.keys(s).length === 0) return true;
   if (s[ui] === undefined) return true;
@@ -1807,16 +1809,19 @@ let _accessUid = '__global__';
 
 function isHWUnlocked(ui, li) {
   if (!isUnlocked(ui, li)) return false;
-  // Always check against the canonical homework lesson index for this week group
   const hwLi = (WEEK_HOMEWORK_LESSON[ui] !== undefined && WEEK_HOMEWORK_LESSON[ui][li] !== undefined)
     ? WEEK_HOMEWORK_LESSON[ui][li] : li;
-  const personal = uLoad('my_hw_locks', null);
-  if (personal !== null && personal !== undefined) {
-    if (!personal || Object.keys(personal).length === 0) return true;
-    if (personal[ui] === undefined || personal[ui] === null) return true;
-    if (personal[ui][hwLi] === undefined) return true;
-    return personal[ui][hwLi];
+  // Check per-user hw locks from shared_data (authoritative)
+  if (currentUser && currentUser.id && currentUser.id !== 'supervisor') {
+    const perUser = sLoad(`hw_locks__${currentUser.id}`, null);
+    if (perUser !== null) {
+      if (!perUser || Object.keys(perUser).length === 0) return true;
+      if (perUser[ui] === undefined || perUser[ui] === null) return true;
+      if (perUser[ui][hwLi] === undefined) return true;
+      return perUser[ui][hwLi];
+    }
   }
+  // Fall back to global hw locks
   const s = getHWLocks() || {};
   if (Object.keys(s).length === 0) return true;
   if (s[ui] === undefined || s[ui] === null) return true;
@@ -2601,6 +2606,32 @@ function initApp(){buildDashboard();buildToDoList();buildCurriculumGrid();popula
 function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='access'){buildAccessControls();}if(id==='announcements'){loadAnnouncements();}if(id==='manage-announcements'){loadManageAnnouncements();}if(id==='quiz'){const qc=document.getElementById('quiz-content');if(qc&&!qc.innerHTML.trim())qc.innerHTML='<div class="card"><p style="font-size:14px;color:var(--gray-400)">Select a unit and lesson above, then click "Start quiz".</p></div>';}}
 
 // ── DASHBOARD ────────────────────────────────────────────
+function goToTodoItem(page, ui, li) {
+  // Navigate to the correct page and pre-select unit/lesson
+  const btn = document.querySelector(`[data-page="${page}"]`);
+  showPage(page, btn);
+  if (page === 'discussion') {
+    const uSel = document.getElementById('discussion-unit-select');
+    if (uSel) { uSel.value = ui; loadDiscussionLessons(); }
+    const lSel = document.getElementById('discussion-lesson-select');
+    if (lSel) { lSel.value = li; loadForumQuestions(); }
+  } else if (page === 'homework') {
+    const uSel = document.getElementById('hw-unit-select');
+    if (uSel) { uSel.value = ui; loadHWLessons(); }
+    setTimeout(() => {
+      const lSel = document.getElementById('hw-lesson-select');
+      if (lSel) { lSel.value = li; loadHWContent(); }
+    }, 50);
+  } else if (page === 'quiz') {
+    const uSel = document.getElementById('quiz-unit-select');
+    if (uSel) { uSel.value = ui; populateQuizLessons(); }
+    setTimeout(() => {
+      const lSel = document.getElementById('quiz-lesson-select');
+      if (lSel) { lSel.value = li; }
+    }, 50);
+  }
+}
+
 function buildToDoList() {
   const c = document.getElementById('todo-list');
   const countEl = document.getElementById('todo-count');
@@ -2626,7 +2657,7 @@ function buildToDoList() {
           task: 'Post your discussion response',
           icon: '💬',
           color: 'var(--teal)',
-          action: `showPage('discussion', document.querySelector('[data-page="discussion"]'))`
+          action: `goToTodoItem('discussion',${ui},${li})`
         });
       }
 
@@ -2643,7 +2674,7 @@ function buildToDoList() {
             task: 'Submit homework assignment',
             icon: '📝',
             color: 'var(--amber)',
-            action: `showPage('homework', document.querySelector('[data-page="homework"]'))`
+            action: `goToTodoItem('homework',${ui},${li})`
           });
         }
       }
@@ -2658,7 +2689,7 @@ function buildToDoList() {
           task: 'Take the quiz',
           icon: '🧠',
           color: 'var(--purple)',
-          action: `showPage('quiz', document.querySelector('[data-page="quiz"]'))`
+          action: `goToTodoItem('quiz',${ui},${li})`
         });
       }
     });
